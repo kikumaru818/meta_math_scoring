@@ -33,8 +33,8 @@ def add_learner_params():
     parser.add_argument('--lr', default=1e-5, type=float,
                         help='Base learning rate')
     # trainer params
-    parser.add_argument('--save_freq', default=1000000000000,
-                        type=int, help='Frequency to save the model')
+    #parser.add_argument('--save_freq', default=1000000000000,
+    #                    type=int, help='Frequency to save the model')
     parser.add_argument('--eval_freq', default=1,
                         type=int, help='Evaluation frequency')
     parser.add_argument('--workers', default=2, type=int,

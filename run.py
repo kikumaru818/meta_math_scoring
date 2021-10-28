@@ -6,7 +6,8 @@ import datetime
 import subprocess
 import string
 import sys
-from utils.utils import safe_makedirs
+from utils.utils import safe_makedirs,open_json
+tasks = open_json('data/tasks.json')
 
 create_dirs = ['logs/', 'slurm/', 'configs/']
 for c in create_dirs:
@@ -40,16 +41,16 @@ def is_long(combo):
 
 save = False
 hyperparameters = [
-    [('task',), [  "Grade 4/2017_DBA_DR04_1715RE1T10_05"]],
+    [('task',), tasks],#[  "Grade 4/2017_DBA_DR04_1715RE1T10_05"]],
     [('lm',), ['bert-base-uncased']],
     [('lr',), [1e-5]],#2e-4
-    [('iters',), [20]],
+    [('iters',), [100]],
     [('seed',), [999]],
-    [('batch_size',), [100]],
+    [('batch_size',), [32]],
 ]
 
 def get_gpu(combo):
-    return "2080ti"
+    return "1080ti"
 
     
 def is_valid(combo):

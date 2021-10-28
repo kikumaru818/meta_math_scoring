@@ -36,9 +36,9 @@ class BaseModel(nn.Module):
         train_loader = torch.utils.data.DataLoader(
             self.trainset, collate_fn=collate_fn, batch_size=self.params.batch_size, num_workers=self.params.workers)
         test_loader = torch.utils.data.DataLoader(
-            self.testset, collate_fn=collate_fn, batch_size=self.params.batch_size*4, num_workers=self.params.workers,   shuffle=False, drop_last=False)
+            self.testset, collate_fn=collate_fn, batch_size=self.params.batch_size*2, num_workers=self.params.workers,   shuffle=False, drop_last=False)
         valid_loader = torch.utils.data.DataLoader(
-            self.validset, collate_fn=collate_fn, batch_size=self.params.batch_size*4, num_workers=self.params.workers,   shuffle=False, drop_last=False)
+            self.validset, collate_fn=collate_fn, batch_size=self.params.batch_size*2, num_workers=self.params.workers,   shuffle=False, drop_last=False)
         return train_loader, valid_loader, test_loader
     
     def zero_grad(self):
