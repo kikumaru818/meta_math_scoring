@@ -20,7 +20,7 @@ class BaseModel(nn.Module):
     
     def prepare_model(self):
         self.tokenizer = AutoTokenizer.from_pretrained(self.params.lm)
-        self.model = AutoModelForSequenceClassification.from_pretrained(self.params.lm, num_labels=self.max_label-self.min_label+1)
+        self.model = AutoModelForSequenceClassification.from_pretrained(self.params.lm, num_labels=self.max_label-self.min_label+1).to(self.device)
         self.optimizer = AdamW(self.model.parameters(), lr=self.params.lr)
 
     def prepare_data(self):
