@@ -65,10 +65,10 @@ def main():
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')    
     if args.cuda: assert device.type == 'cuda', 'no gpu found!'
     if args.neptune:
-        import neptune
+        import neptune.new as neptune
         project = "arighosh/naep"
         run = neptune.init(
-                 project=project,
+                project=project,
                 api_token=os.environ["NEPTUNE_API_TOKEN"],
                 capture_hardware_metrics =False,
                 name =args.name,

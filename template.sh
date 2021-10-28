@@ -10,7 +10,7 @@ module load python3/current
 cd /mnt/nfs/scratch1/arighosh/naep
 source ../venv/simclr/bin/activate
 python train.py\
-    --task {task}\
+    --task "{task}"\
     --lm {lm}\
     --lr {lr}\
     --batch_size {batch_size}\
