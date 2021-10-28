@@ -1,102 +1,102 @@
 {
   "Grade 4/2017_DBA_DR04_1715RE1T10_05": {
     "train": "2804b75d73b3e3c6d9af30e81f4d72af",
-    "val": "3cfa347970662f30ba9c516329ea7840",
+    "valid": "3cfa347970662f30ba9c516329ea7840",
     "test": "3b87a473cdb4dd792464368a0c0ef186"
   },
   "Grade 4/2017_DBA_DR04_1715RE4T05G04_03": {
     "train": "d2ba79d527b53bac036d1add0ee839a4",
-    "val": "0b13263288b9daab4e049ba93ea6a912",
+    "valid": "0b13263288b9daab4e049ba93ea6a912",
     "test": "b596fb6e85c1428af140e343b6707059"
   },
   "Grade 4/2017_DBA_DR04_1715RE4T05G04_06": {
     "train": "ee01583e1774799f3826111b6a5329c6",
-    "val": "191af8e4e29453a7b012df099d25dda9",
+    "valid": "191af8e4e29453a7b012df099d25dda9",
     "test": "afb439e14c3fd3a337e51d617272f2e6"
   },
   "Grade 4/2017_DBA_DR04_1715RE4T05G04_07": {
     "train": "54da65dca0046aa4d4268f81dae546ef",
-    "val": "456ee17e420f2ff2f533d18423730bf3",
+    "valid": "456ee17e420f2ff2f533d18423730bf3",
     "test": "1c237ac9c21f0d57d35aa5ce069af205"
   },
   "Grade 4/2017_DBA_DR04_1715RE4T05G04_09": {
     "train": "f41e4832bed39db8be9d9ab4f1b69325",
-    "val": "631f58ef7cd39eeba130e21cd463fd18",
+    "valid": "631f58ef7cd39eeba130e21cd463fd18",
     "test": "8943e0d4f02eb6471828e9356af59bfb"
   },
   "Grade 4/2017_DBA_DR04_1715RE4T08G04_03": {
     "train": "e4dae41fe6771ddf9df377ad3cb302e5",
-    "val": "8b61c6cf1fcd2f87f2ca736e0a7077cd",
+    "valid": "8b61c6cf1fcd2f87f2ca736e0a7077cd",
     "test": "9d9608f40bd02c6ebb1651933be7a105"
   },
   "Grade 4/2017_DBA_DR04_1715RE4T08G04_06": {
     "train": "1c8b79d1d0c56e245dc75eb603e0fa2b",
-    "val": "15d4760beb11444eaeedc6e322dea21d",
+    "valid": "15d4760beb11444eaeedc6e322dea21d",
     "test": "22eddedb1526eaa89cdf3f347103d31b"
   },
   "Grade 4/2017_DBA_DR04_1715RE4T08G04_07": {
     "train": "3c26b66e1524de6a8392ce233144d1d2",
-    "val": "ca72479c847bcaea40c602051c4bf363",
+    "valid": "ca72479c847bcaea40c602051c4bf363",
     "test": "82fba21bba0b65f8cff5bf9d253b6e39"
   },
   "Grade 4/2017_DBA_DR04_1715RE4T08G04_09": {
     "train": "59b0a08cf6a185db2ca9f9ac343ed8f9",
-    "val": "a6af2f63a2839e142ccf795d39e111e4",
+    "valid": "a6af2f63a2839e142ccf795d39e111e4",
     "test": "8304a1b62743ee598108dcb6fe172577"
   },
   "Grade 8/2017_DBA_DR08_1715RE2T13_05": {
     "train": "0c8e6e2038a97cd5db133ffaa77ab71a",
-    "val": "4f0e0064c6c5a8a195ebaadedeb98b97",
+    "valid": "4f0e0064c6c5a8a195ebaadedeb98b97",
     "test": "380a8da6a6af69444664fa52a9fa1d5a"
   },
   "Grade 8/2017_DBA_DR08_1715RE2T13_07": {
     "train": "7f9ae1baecf42cfc5cd473043bdf0855",
-    "val": "bb99384c3d67567a6baba1dfde0cbfc3",
+    "valid": "bb99384c3d67567a6baba1dfde0cbfc3",
     "test": "4af20ba6ee8555fd8e9e01bcf699e711"
   },
   "Grade 8/2017_DBA_DR08_1715RE2T13_08": {
     "train": "fd20e569f581a98a0163a70dd6ade291",
-    "val": "e6a2a13d5fdabdac5f35ef9e3aac9970",
+    "valid": "e6a2a13d5fdabdac5f35ef9e3aac9970",
     "test": "2f8bbf6bab10f0a01a7eb622e68d642d"
   },
   "Grade 8/2017_DBA_DR08_1715RE4T05G08_03": {
     "train": "b09acf817f5448063c9cad2a67ea744f",
-    "val": "ce431075514e211f9e6b8abda08b8243",
+    "valid": "ce431075514e211f9e6b8abda08b8243",
     "test": "0f9560f20f4647713a13a8f0cd17e71e"
   },
   "Grade 8/2017_DBA_DR08_1715RE4T05G08_06": {
     "train": "615e6dc64ea943b90c292750f79a4518",
-    "val": "79199980651aa663666af411453305ca",
+    "valid": "79199980651aa663666af411453305ca",
     "test": "0f23a235d5ffc076f8d4dff0a09d41c2"
   },
   "Grade 8/2017_DBA_DR08_1715RE4T05G08_07": {
     "train": "18bae8a2cdbee7025cae9d3adfa0aeca",
-    "val": "e97b92321600f051c03c8fce314bb64a",
+    "valid": "e97b92321600f051c03c8fce314bb64a",
     "test": "eb4e823f7ea9f6f3741fbc1a37649fbe"
   },
   "Grade 8/2017_DBA_DR08_1715RE4T05G08_09": {
     "train": "8bb7c91389442e041fcb0522161f07ca",
-    "val": "d05ec153bafe40eac367ccfede114dcc",
+    "valid": "d05ec153bafe40eac367ccfede114dcc",
     "test": "1f0156618187974c69dcd68cf603cadb"
   },
   "Grade 8/2017_DBA_DR08_1715RE4T08G08_03": {
     "train": "bc1a5e01b90f45259bcd6d3e87b30800",
-    "val": "e66bf61b48268b75076ec0136a1a4c6a",
+    "valid": "e66bf61b48268b75076ec0136a1a4c6a",
     "test": "059328029c03f522d1dd8c251c3f9b8e"
   },
   "Grade 8/2017_DBA_DR08_1715RE4T08G08_06": {
     "train": "d74006d88e341debc946d5cc482cfba3",
-    "val": "23c95b53659115db3a3a089817ae3c4f",
+    "valid": "23c95b53659115db3a3a089817ae3c4f",
     "test": "7f7c5bedfc79d8ab048527e452fcf1e2"
   },
   "Grade 8/2017_DBA_DR08_1715RE4T08G08_07": {
     "train": "7749ea0ca32ff8426d5637eb1587092e",
-    "val": "b36da5e3d9b7087f4dee6c128a842064",
+    "valid": "b36da5e3d9b7087f4dee6c128a842064",
     "test": "09e7e91ed8ccf7fe2f8195f509acf1a7"
   },
   "Grade 8/2017_DBA_DR08_1715RE4T08G08_09": {
     "train": "b4ea6fd002c38117bfc86ebce2b77cc2",
-    "val": "1942193b5861de4b9c674124469ded39",
+    "valid": "1942193b5861de4b9c674124469ded39",
     "test": "61b548990bbc1ba15f2120983fe327fa"
   }
 }

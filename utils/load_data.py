@@ -1,4 +1,4 @@
-from transformers.utils.logging import remove_handler
+#from transformers.utils.logging import remove_handler
 from utils.utils import open_json,dump_json
 from collections import defaultdict
 import hashlib
@@ -47,23 +47,23 @@ def compute_distribution(output):
 
 def compute_hashes(data):
     hashes = {}
-    for partition in ['train', 'val', 'test']:
+    for partition in ['train', 'valid', 'test']:
         orders = [d['bl'] for d in data[partition]]
         hashes[partition] = hashlib.md5(''.join(orders).encode('utf-8')).hexdigest()
     return hashes
 
-def create_splits(data,train,val, test):
+def create_splits(data,train,valid):
     n = len(data)
-    n_train, n_val = int(n*train),int(n*(train+val))
+    n_train, n_val = int(n*train),int(n*(train+valid))
     random.Random(SEED).shuffle(data)
     train_data, val_data, test_data = data[:n_train], data[n_train:n_val], data[n_val:]
-    output = {'train':train_data, 'val':val_data, 'test':test_data}
+    output = {'train':train_data, 'valid':val_data, 'test':test_data}
     compute_distribution(output)
     hashes =  compute_hashes(output)
     return output,hashes
     
 
-def load_dataset(task, create_hash, train,val, test):
+def load_dataset(task, create_hash, train,valid):
     """
         Returns {'train/val/test': [{key:value}], 'train/val/test_dist':{label:percentage}}
         feature schema : {'bl':0, 'l1':1, 'l2':2, 'sx':3, 'rc':4, 'an':5, 'wc':6, 'txt':7} word val represent column number of 
@@ -73,14 +73,14 @@ def load_dataset(task, create_hash, train,val, test):
     val_file = RAW_DIR+task+"/"+task.split('/')[1]+"_Validation_DS&SS.csv"
     data, data_2  =  parse_csv(train_file), parse_csv(val_file)
     data.extend(data_2)
-    data, hashes = create_splits(data, train,val, test)
+    data, hashes = create_splits(data, train,valid)
     tasks_hash = open_json(HASH_PATH)
     if create_hash:
-        tasks_hash[task] = {'train':hashes['train'], 'val':hashes['val'], 'test':hashes['test']}
+        tasks_hash[task] = {'train':hashes['train'], 'valid':hashes['valid'], 'test':hashes['test']}
         dump_json(HASH_PATH, tasks_hash)
     else:
         assert tasks_hash.get(task, {}).get('train', "0")==hashes['train'], 'Train Split is not Matching.'
-        assert tasks_hash.get(task, {}).get('val', "0")==hashes['val'], 'Validation Split is not Matching.'
+        assert tasks_hash.get(task, {}).get('valid', "0")==hashes['valid'], 'Validation Split is not Matching.'
         assert tasks_hash.get(task, {}).get('test', "0")==hashes['test'], 'Test Split is not Matching.'
     return data
 
@@ -89,7 +89,7 @@ def load_dataset(task, create_hash, train,val, test):
 def main():
     tasks = open_json('data/tasks.json')
     for task in tasks:
-        data = load_dataset(task, create_hash=False,train=0.6, val=0.2, test=0.2)
+        data = load_dataset(task, create_hash=False,train=0.6, valid=0.2)
         pass
     
     
