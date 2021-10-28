@@ -30,6 +30,7 @@ class BaseModel(nn.Module):
         self.testset = data['test']
         self.max_label = max(data['train_dist'].keys())
         self.min_label = min(data['train_dist'].keys())
+        self.majority_class = max(data['test_dist'].values())
 
     def dataloaders(self, iters=None):
         collate_fn = CollateWraper(self.tokenizer, self.min_label)

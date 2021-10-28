@@ -21,7 +21,7 @@ def add_learner_params():
     parser.add_argument('--lm', default='bert-base-uncased',
                         help='Base Language model'
                         )
-    parser.add_argument('--task', default="Grade 4/2017_DBA_DR04_1715RE1T10_05",help='Dataset')
+    parser.add_argument('--task', default="Grade 4/2017_DBA_DR04_1715RE4T05G04_03",help='Dataset')
     # optimizer params
     parser.add_argument('--lr_schedule', default='warmup-const')
     parser.add_argument('--opt', default='sgd',
@@ -64,6 +64,8 @@ def main():
     safe_makedirs(args.root)
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')    
     if args.cuda: assert device.type == 'cuda', 'no gpu found!'
+    with open(args.root+'config.yml', 'w') as outfile:
+        yaml.dump(vars(args), outfile, default_flow_style=False)
     if args.neptune:
         import neptune.new as neptune
         project = "arighosh/naep"
@@ -74,12 +76,16 @@ def main():
                 name =args.name,
                 )  
         run["parameters"] = vars(args)
-    with open(args.root+'config.yml', 'w') as outfile:
-        yaml.dump(vars(args), outfile, default_flow_style=False)
+    
     ###
     model = models.finetune.BaseModel(args, device=device)
     model.prepare_data()
     model.prepare_model()
+    #
+    if args.neptune:
+        run["parameters/majority_class"] = model.majority_class
+        run["parameters/n_labels"] = model.max_label-model.min_label +1
+
     ###
     cur_iter = 0
     continue_training = cur_iter < args.iters
