@@ -92,9 +92,9 @@ def main():
     #
     data_time, it_time = 0, 0
     #metric
-    best_metrics = 0.
-    best_metrics_with_valid = 0.
-    best_valid_metrics = 0.
+    best_metrics = -1.
+    best_metrics_with_valid = -1
+    best_valid_metrics = -1
     #
     while continue_training:
         train_loader, valid_loader,test_loader = model.dataloaders(
@@ -107,7 +107,8 @@ def main():
             batch = {k: v.to(device) for k, v in batch.items()}
             data_time += time.time() - start_time
             logs = model.train_step(batch)  
-            train_logs.append({k: utils.tonp(v) for k, v in logs.items()})
+            train_logs.append(logs)
+            # train_logs.append({k: utils.tonp(v) for k, v in logs.items()})
         # save logs for the batch
         if cur_iter % args.eval_freq == 0 or cur_iter >= args.iters:
             test_start_time = time.time()
@@ -123,20 +124,26 @@ def main():
             test_logs = utils.agg_all_metrics(test_logs)
             valid_logs = utils.agg_all_metrics(valid_logs)
             test_it_time = time.time()-test_start_time
-            best_metrics =  max(test_logs['acc'], best_metrics)
-            if float(valid_logs['acc'])>best_valid_metrics:
-                best_valid_metrics = valid_logs['acc']
-                best_metrics_with_valid =  float(test_logs['acc'])
+            best_metrics =  max(test_logs['kappa'], best_metrics)
+            if float(valid_logs['kappa'])>best_valid_metrics:
+                best_valid_metrics = valid_logs['kappa']
+                best_metrics_with_valid =  float(test_logs['kappa'])
             if args.neptune:
                 run["metrics/test/accuracy"].log(test_logs['acc'])
+                run["metrics/test/kappa"].log(test_logs['kappa'])
+                run["metrics/test/loss"].log(test_logs['loss'])
                 run["metrics/valid/accuracy"].log(valid_logs['acc'])
-                run["metrics/test/best_accuracy"].log(best_metrics)
-                run["metrics/test/best_accuracy_with_valid"].log(best_metrics_with_valid)
+                run["metrics/valid/kappa"].log(valid_logs['kappa'])
+                run["metrics/valid/loss"].log(valid_logs['loss'])
+                run["metrics/test/best_kappa"].log(best_metrics)
+                run["metrics/test/best_kappa_with_valid"].log(best_metrics_with_valid)
 
             it_time += time.time() - start_time
             train_logs = utils.agg_all_metrics(train_logs)
             if args.neptune:
                 run["metrics/train/accuracy"].log(train_logs['acc'])
+                run["metrics/train/kappa"].log(train_logs['kappa'])
+                run["metrics/train/loss"].log(train_logs['loss'])
                 run["logs/train/it_time"].log(it_time)
                 run["logs/cur_iter"].log(cur_iter)
             data_time, it_time = 0, 0
