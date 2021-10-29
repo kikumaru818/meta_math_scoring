@@ -52,7 +52,7 @@ hyperparameters = [
 def get_gpu(combo):
     if 'large' in combo['lm']:
         return "m40"
-    if 'bert' in combo['lm']:
+    if 'bert-base-uncased' in combo['lm']:
         return 'titanx'
     return "1080ti"
 
