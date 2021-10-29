@@ -18,7 +18,7 @@ def add_learner_params():
     parser.add_argument('--slurm_partition', default='',
                         help='slurm partitions for the experiment')
     # problem definition
-    parser.add_argument('--lm', default='bert-base-uncased',
+    parser.add_argument('--lm', default='gpt2',
                         help='Base Language model'
                         )
     parser.add_argument('--task', default="Grade 4/2017_DBA_DR04_1715RE4T08G04_09",help='Dataset')

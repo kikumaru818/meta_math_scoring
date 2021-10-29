@@ -6,7 +6,7 @@ from transformers import AdamW
 import numpy as np
 from tqdm import tqdm
 import copy
-from transformers import AutoTokenizer, AutoModelForSequenceClassification
+from transformers import AutoTokenizer, AutoModelForSequenceClassification,AutoConfig
 from utils.load_data import load_dataset
 from utils.datautils import CollateWraper
 
@@ -19,8 +19,13 @@ class BaseModel(nn.Module):
         self.device = device
     
     def prepare_model(self):
+        self.config = AutoConfig.from_pretrained(self.params.lm,num_labels=self.max_label-self.
+        min_label+1)
         self.tokenizer = AutoTokenizer.from_pretrained(self.params.lm)
-        self.model = AutoModelForSequenceClassification.from_pretrained(self.params.lm, num_labels=self.max_label-self.min_label+1).to(self.device)
+        if self.tokenizer.pad_token is None:
+            self.tokenizer.pad_token = self.tokenizer.eos_token
+            self.config.pad_token_id = self.config.eos_token_id
+        self.model = AutoModelForSequenceClassification.from_pretrained(self.params.lm, config=self.config).to(self.device)
         self.optimizer = AdamW(self.model.parameters(), lr=self.params.lr)
 
     def prepare_data(self):
