@@ -93,7 +93,7 @@ class BaseModel(nn.Module):
         logits = outputs.logits
         predictions = torch.argmax(logits, dim=-1)
         acc = predictions==labels
-        return {'loss': loss.detach().cpu(),'acc':acc.detach().cpu(),'kappa':{'preds':predictions.detach().cpu(), 'labels':batch['labels'].detach().cpu()}}
+        return {'loss': loss.detach().cpu(),'acc':acc.detach().cpu(),'kappa':{'preds':predictions.detach().cpu(), 'labels':labels.detach().cpu()}}
 
 
 
@@ -111,7 +111,7 @@ class BaseModel(nn.Module):
         logits = outputs.logits
         predictions = torch.argmax(logits, dim=-1)
         acc = predictions==labels
-        return {'loss': loss.detach().cpu(),'acc':acc.detach().cpu(),'kappa':{'preds':predictions.detach().cpu(), 'labels':batch['labels'].detach().cpu()}}
+        return {'loss': loss.detach().cpu(),'acc':acc.detach().cpu(),'kappa':{'preds':predictions.detach().cpu(), 'labels':labels.detach().cpu()}}
     
 
     
