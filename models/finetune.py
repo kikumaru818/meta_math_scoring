@@ -92,7 +92,7 @@ class BaseModel(nn.Module):
         self.grad_step()
         logits = outputs.logits
         predictions = torch.argmax(logits, dim=-1)
-        acc = predictions==batch['labels']
+        acc = predictions==labels
         return {'loss': loss.detach().cpu(),'acc':acc.detach().cpu(),'kappa':{'preds':predictions.detach().cpu(), 'labels':batch['labels'].detach().cpu()}}
 
 
@@ -110,7 +110,7 @@ class BaseModel(nn.Module):
         loss = self.compute_loss(outputs,labels,labels2)
         logits = outputs.logits
         predictions = torch.argmax(logits, dim=-1)
-        acc = predictions==batch['labels']
+        acc = predictions==labels
         return {'loss': loss.detach().cpu(),'acc':acc.detach().cpu(),'kappa':{'preds':predictions.detach().cpu(), 'labels':batch['labels'].detach().cpu()}}
     
 
