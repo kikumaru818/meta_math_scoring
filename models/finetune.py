@@ -17,6 +17,7 @@ class BaseModel(nn.Module):
         super().__init__()
         self.params = copy.deepcopy(params)
         self.device = device
+        
     
     def prepare_model(self):
         self.config = AutoConfig.from_pretrained(self.params.lm,num_labels=self.max_label-self.
@@ -53,10 +54,40 @@ class BaseModel(nn.Module):
     def grad_step(self):
         self.optimizer.step()
     
+    def compute_loss(self, outputs,labels, labels2):
+        loss_functions = self.params.losses.split(';')
+        is_labels2 = self.params.labels2
+        losses = []
+        for loss_function in loss_functions:
+            losses.append(self.loss_layer(loss_function, outputs.logits,labels))
+            if is_labels2:
+                losses.append(self.loss_layer(loss_function, outputs.logits,labels2))
+        return sum(losses)/len(losses)
+    def loss_layer(self, loss_function, output, target):
+        if loss_function=='cce':
+            m = nn.CrossEntropyLoss()
+            loss = m(output,target)
+        elif loss_function=='qwp':
+            m = nn.Softmax()
+            probs = m(output)
+            score = ((torch.arange(self.max_label-self.min_label+1).to(self.device)[None,:]-target[:,None])**2.)/ ((self.max_label-self.min_label)**2.)
+            loss = torch.sum(score*probs)/ len(target)
+        return loss
+    
     def train_step(self, batch):
         self.zero_grad()
+        #
+        labels = batch['labels']
+        del batch['labels']
+        if 'labels2' in batch:
+            labels2 = batch['labels2']
+            del batch['labels2']
+        else:
+            labels2 = None
         outputs = self.model(**batch)
-        loss = outputs.loss
+        #
+        loss = self.compute_loss(outputs,labels,labels2)
+        # loss = outputs.loss
         loss.backward()
         self.grad_step()
         logits = outputs.logits
@@ -67,9 +98,16 @@ class BaseModel(nn.Module):
 
 
     def test_step(self, batch):
+        labels = batch['labels']
+        del batch['labels']
+        if 'labels2' in batch:
+            labels2 = batch['labels2']
+            del batch['labels2']
+        else:
+            labels2 = None
         with torch.no_grad():
             outputs = self.model(**batch)
-        loss = outputs.loss
+        loss = self.compute_loss(outputs,labels,labels2)
         logits = outputs.logits
         predictions = torch.argmax(logits, dim=-1)
         acc = predictions==batch['labels']

@@ -42,19 +42,20 @@ def is_long(combo):
 save = False
 hyperparameters = [
     [('task',), tasks],#[  "Grade 4/2017_DBA_DR04_1715RE1T10_05"]],
-    [('lm',), ['bert-base-uncased','roberta-base']],#'bert-base-uncased','roberta-base','bert-large-uncased','roberta-large','gpt2'
-    [('lr',), [1e-6]],#2e-4
+    [('lm',), ['bert-base-uncased']],#'bert-base-uncased','roberta-base','bert-large-uncased','roberta-large','gpt2'
+    [('losses',), ['cce;qwp', 'cce', 'qwp']]
+    [('lr',), [1e-5]],#2e-4
     [('iters',), [100]],
     [('seed',), [999]],
-    [('batch_size',), [16]],
+    [('batch_size',), [32]],
 ]
 
 def get_gpu(combo):
     if 'large' in combo['lm']:
         return "m40"
-    if 'bert-base-uncased' in combo['lm']:
-        return 'titanx'
-    return "1080ti"
+    if 'cce' in combo['losses']:
+        return "1080ti"
+    return "titanx"
 
     
 def is_valid(combo):

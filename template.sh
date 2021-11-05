@@ -12,6 +12,7 @@ source ../venv/simclr/bin/activate
 python train.py\
     --task "{task}"\
     --lm {lm}\
+    --losses {losses}\
     --lr {lr}\
     --batch_size {batch_size}\
     --seed {seed}\
