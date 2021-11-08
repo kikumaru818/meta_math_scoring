@@ -6,9 +6,16 @@ from transformers import AdamW
 import numpy as np
 from tqdm import tqdm
 import copy
-from transformers import AutoTokenizer, AutoModelForSequenceClassification,AutoConfig
+from transformers import AutoTokenizer, AutoModelForSequenceClassification,AutoConfig,GPT2LMHeadModel
 from utils.load_data import load_dataset
 from utils.datautils import CollateWraper
+
+score_mapper = {
+                'verb':
+                {2: ['Ġbad', 'Ġgood'], 3:['Ġbad','Ġaverage','Ġgood'],4:['Ġbad','Ġaverage','Ġgood', 'Ġexcellent'] },
+                'score': 
+                {2: ['Ġ0', 'Ġ1'], 3:['Ġ0','Ġ1','Ġ2'],4:['Ġ0','Ġ1','Ġ2', 'Ġ3'] }
+                }
 
 
 
@@ -26,7 +33,13 @@ class BaseModel(nn.Module):
         if self.tokenizer.pad_token is None:
             self.tokenizer.pad_token = self.tokenizer.eos_token
             self.config.pad_token_id = self.config.eos_token_id
-        self.model = AutoModelForSequenceClassification.from_pretrained(self.params.lm, config=self.config).to(self.device)
+        if self.params.generate=='none':
+            self.model = AutoModelForSequenceClassification.from_pretrained(self.params.lm, config=self.config).to(self.device)
+        else:
+            assert 'gpt' in self.params.lm, 'only gpt model is implemented with generative tokens'
+            self.model = GPT2LMHeadModel.from_pretrained(self.params.lm,config=self.config)
+            labels =  score_mapper[self.params.generate][self.max_label-self.min_label+1]
+            self.label_ids = self.tokenizer.convert_tokens_to_ids(labels)
         self.optimizer = AdamW(self.model.parameters(), lr=self.params.lr)
 
     def prepare_data(self):
@@ -37,9 +50,11 @@ class BaseModel(nn.Module):
         self.max_label = max(data['train_dist'].keys())
         self.min_label = min(data['train_dist'].keys())
         self.majority_class = max(data['test_dist'].values())
+            
+
 
     def dataloaders(self, iters=None):
-        collate_fn = CollateWraper(self.tokenizer, self.min_label)
+        collate_fn = CollateWraper(self.tokenizer, self.min_label, self.params.generate)
         train_loader = torch.utils.data.DataLoader(
             self.trainset, collate_fn=collate_fn, batch_size=self.params.batch_size, num_workers=self.params.workers)
         test_loader = torch.utils.data.DataLoader(
@@ -54,15 +69,27 @@ class BaseModel(nn.Module):
     def grad_step(self):
         self.optimizer.step()
     
-    def compute_loss(self, outputs,labels, labels2):
+    def compute_loss(self,batch, outputs,labels, labels2):
+        if self.params.generate=='none':
+            return self.bert_style_loss(outputs.logits,labels,labels2)
+        else:
+            return self.gpt_style_loss(batch, outputs,labels,labels2)
+    
+    def gpt_style_loss(self,batch, outputs,labels, labels2):
+        predict_positions = torch.sum(batch['attention_mask'], dim=-1)-2
+        logits = outputs.logits[torch.arange(len(labels)), predict_positions, :][:, self.label_ids]
+        return self.bert_style_loss(logits,labels,labels2)
+
+    def bert_style_loss(self,logits,labels, labels2):
         loss_functions = self.params.losses.split(';')
         is_labels2 = self.params.labels2
         losses = []
         for loss_function in loss_functions:
-            losses.append(self.loss_layer(loss_function, outputs.logits,labels))
+            losses.append(self.loss_layer(loss_function, logits,labels))
             if is_labels2:
-                losses.append(self.loss_layer(loss_function, outputs.logits,labels2))
-        return sum(losses)/len(losses)
+                losses.append(self.loss_layer(loss_function, logits,labels2))
+        return sum(losses)/len(losses), logits
+    
     def loss_layer(self, loss_function, output, target):
         if loss_function=='cce':
             m = nn.CrossEntropyLoss()
@@ -86,11 +113,10 @@ class BaseModel(nn.Module):
             labels2 = None
         outputs = self.model(**batch)
         #
-        loss = self.compute_loss(outputs,labels,labels2)
+        loss,logits = self.compute_loss(batch,outputs,labels,labels2)
         # loss = outputs.loss
         loss.backward()
         self.grad_step()
-        logits = outputs.logits
         predictions = torch.argmax(logits, dim=-1)
         acc = predictions==labels
         return {'loss': loss.detach().cpu(),'acc':acc.detach().cpu(),'kappa':{'preds':predictions.detach().cpu(), 'labels':labels.detach().cpu()}}
@@ -107,8 +133,7 @@ class BaseModel(nn.Module):
             labels2 = None
         with torch.no_grad():
             outputs = self.model(**batch)
-        loss = self.compute_loss(outputs,labels,labels2)
-        logits = outputs.logits
+        loss,logits = self.compute_loss(batch, outputs,labels,labels2)
         predictions = torch.argmax(logits, dim=-1)
         acc = predictions==labels
         return {'loss': loss.detach().cpu(),'acc':acc.detach().cpu(),'kappa':{'preds':predictions.detach().cpu(), 'labels':labels.detach().cpu()}}

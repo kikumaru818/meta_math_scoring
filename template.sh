@@ -13,6 +13,7 @@ python train.py\
     --task "{task}"\
     --lm {lm}\
     --losses "{losses}"\
+    --generate {generate}\
     --lr {lr}\
     --batch_size {batch_size}\
     --seed {seed}\

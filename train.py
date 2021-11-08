@@ -22,6 +22,7 @@ def add_learner_params():
                         help='Base Language model'
                         )
     parser.add_argument('--task', default="Grade 4/2017_DBA_DR04_1715RE4T08G04_09",help='Dataset')
+    parser.add_argument('--generate', default='none',help= 'generate last token, none or score or verb')
     parser.add_argument('--losses', default="cce",help='; separated losses among cce, qwp e.g. cce;qwp')
     parser.add_argument('--labels2', action='store_false', help='consider second label with average weight')
     # optimizer params
