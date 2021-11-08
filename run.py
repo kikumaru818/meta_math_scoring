@@ -50,7 +50,7 @@ hyperparameters = [
     [('lr',), [1e-5]],#2e-4
     [('iters',), [100]],
     [('seed',), [999]],
-    [('batch_size',), [32]],
+    [('batch_size',), [24]],
 ]
 
 def get_gpu(combo):
