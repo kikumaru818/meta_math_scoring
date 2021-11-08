@@ -34,12 +34,13 @@ class BaseModel(nn.Module):
             self.tokenizer.pad_token = self.tokenizer.eos_token
             self.config.pad_token_id = self.config.eos_token_id
         if self.params.generate=='none':
-            self.model = AutoModelForSequenceClassification.from_pretrained(self.params.lm, config=self.config).to(self.device)
+            self.model = AutoModelForSequenceClassification.from_pretrained(self.params.lm, config=self.config)
         else:
             assert 'gpt' in self.params.lm, 'only gpt model is implemented with generative tokens'
             self.model = GPT2LMHeadModel.from_pretrained(self.params.lm,config=self.config)
             labels =  score_mapper[self.params.generate][self.max_label-self.min_label+1]
             self.label_ids = self.tokenizer.convert_tokens_to_ids(labels)
+        self.model = self.model.to(self.device)
         self.optimizer = AdamW(self.model.parameters(), lr=self.params.lr)
 
     def prepare_data(self):
