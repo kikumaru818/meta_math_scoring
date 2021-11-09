@@ -23,7 +23,7 @@ class MultitaskModel(nn.Module):
         super().__init__()
         self.base_model = AutoModel.from_pretrained(model.params.lm)
         classifier_dropout = (
-            model.config.classifier_dropout if model.config.classifier_dropout is not None else model.config.hidden_dropout_prob
+            model.config.hidden_dropout_prob
         )
         self.dropout = nn.Dropout(classifier_dropout)
         self.layers = nn.ModuleList([nn.Linear(model.config.hidden_size, model.max_label[idx]-model.min_label[idx]+1) for idx in range(len(model.max_label))])
