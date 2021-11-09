@@ -13,13 +13,18 @@ class CollateWraper(object):
             self.append_text = ""
     def __call__(self, batch):
         features = [d['txt']+self.append_text for d in batch]
-        labels  =  torch.tensor([d['l1'] if d['l1']>=0 else d['l2'] for d in batch]).long()-self.min_label
-        labels2  =  torch.tensor([d['l2'] if d['l2']>=0 else d['l1'] for d in batch]).long()-self.min_label
+        if isinstance(self.min_label, list):
+            labels  =  torch.tensor([d['l1']-self.min_label[d['tid']] if d['l1']>=0 else d['l2']- self.min_label[d['tid']] for d in batch]).long()
+            labels2  =  torch.tensor([d['l2']-self.min_label[d['tid']] if d['l2']>=0 else d['l1']-self.min_label[d['tid']] for d in batch]).long()
+        else:
+            labels  =  torch.tensor([d['l1'] if d['l1']>=0 else d['l2'] for d in batch]).long()-self.min_label
+            labels2  =  torch.tensor([d['l2'] if d['l2']>=0 else d['l1'] for d in batch]).long()-self.min_label
 
         inputs = tokenize_function(self.tokenizer,features)
         inputs['labels'] = labels
         inputs['labels2'] = labels2
-        
+        if isinstance(self.min_label, list):
+            inputs['tid'] = torch.tensor([d['tid'] for d in batch]).long()
         return inputs
 
         

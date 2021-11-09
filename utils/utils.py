@@ -22,10 +22,11 @@ def agg_all_metrics(outputs):
             res[k] = np.mean(all_logs)
         else:
             res[k] = all_logs[-1]
-    if 'kappa' in outputs[0]:
-        pred_logs =  np.concatenate([tonp(x['kappa']['preds']).reshape(-1) for x in outputs])
-        label_logs = np.concatenate([tonp(x['kappa']['labels']).reshape(-1) for x in outputs])
-        res['kappa'] = cohen_kappa_score(pred_logs, label_logs,weights= 'quadratic')
+    kappa_keys = [k for k in outputs[0].keys() if 'kappa' in k]
+    for kappa_key  in kappa_keys:
+        pred_logs =  np.concatenate([tonp(x[kappa_key]['preds']).reshape(-1) for x in outputs])
+        label_logs = np.concatenate([tonp(x[kappa_key]['labels']).reshape(-1) for x in outputs])
+        res[kappa_key] = cohen_kappa_score(pred_logs, label_logs,weights= 'quadratic')
     return res
     
 def open_json(path_):

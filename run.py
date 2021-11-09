@@ -14,9 +14,13 @@ for c in create_dirs:
     safe_makedirs(c)
 
 def get_memory(combo):
+    if combo['task']=='all':
+        return 50000
     return 20000
 
 def get_cpu(combo):
+    if combo['task']=='all':
+        return 4
     return 3
 
 class SafeDict(dict):
@@ -37,23 +41,24 @@ def get_run_id():
 
     
 def is_long(combo):
-    return 'long'
+    return 'short'
 
 save = False
 hyperparameters = [
-    [('task',), tasks],#[  "Grade 4/2017_DBA_DR04_1715RE1T10_05"]],
-    # [('lm',), ['bert-base-uncased']],#'bert-base-uncased','roberta-base','bert-large-uncased','roberta-large','gpt2'
-    [('lm',), ['gpt2']],#'bert-base-uncased','roberta-base','bert-large-uncased','roberta-large','gpt2'
+    [('task',), ['all']],#[  "Grade 4/2017_DBA_DR04_1715RE1T10_05"]],
+    [('lm',), ['bert-base-uncased']],#'bert-base-uncased','roberta-base','bert-large-uncased','roberta-large','gpt2'
+    # [('lm',), ['gpt2']],#'bert-base-uncased','roberta-base','bert-large-uncased','roberta-large','gpt2'
     # [('losses',), ['cce;qwp', 'cce', 'qwp']],
     [('losses',), [ 'cce']],
-    [('generate',), ['score']],
-    [('lr',), [1e-6]],#2e-4
+    [('generate',), ['none']],
+    [('lr',), [1e-5]],#2e-4
     [('iters',), [100]],
     [('seed',), [999]],
-    [('batch_size',), [8]],
+    [('batch_size',), [32]],
 ]
 
 def get_gpu(combo):
+    return 'rtx8000'
     if 'large' in combo['lm']:
         return "m40"
     if 'cce' in combo['losses']:

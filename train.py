@@ -1,3 +1,4 @@
+from collections import defaultdict
 from utils.load_data import load_dataset
 from utils.utils import open_json, safe_makedirs
 import os
@@ -18,10 +19,11 @@ def add_learner_params():
     parser.add_argument('--slurm_partition', default='',
                         help='slurm partitions for the experiment')
     # problem definition
-    parser.add_argument('--lm', default='gpt2',
+    parser.add_argument('--lm', default='bert-base-uncased',
                         help='Base Language model'
                         )
-    parser.add_argument('--task', default="Grade 4/2017_DBA_DR04_1715RE4T08G04_09",help='Dataset')
+    # parser.add_argument('--task', default="Grade 4/2017_DBA_DR04_1715RE4T08G04_09",help='Dataset')
+    parser.add_argument('--task', default="all",help='Dataset')
     parser.add_argument('--generate', default='none',help= 'generate last token, none or score or verb')
     parser.add_argument('--losses', default="cce",help='; separated losses among cce, qwp e.g. cce;qwp')
     parser.add_argument('--labels2', action='store_false', help='consider second label with average weight')
@@ -95,10 +97,9 @@ def main():
     #
     data_time, it_time = 0, 0
     #metric
-    best_metrics = -1.
-    best_metrics_with_valid = -1
-    best_valid_metrics = -1
-    #
+    best_metrics =  defaultdict(lambda: float('-inf'))
+    best_metrics_with_valid =  defaultdict(lambda: float('-inf'))
+    best_valid_metrics =  defaultdict(lambda: float('-inf'))
     while continue_training:
         train_loader, valid_loader,test_loader = model.dataloaders(
             iters=args.iters)
@@ -107,46 +108,49 @@ def main():
         start_time = time.time()
         cur_iter += 1
         for _, batch in enumerate(train_loader):
-            batch = {k: v.to(device) for k, v in batch.items()}
+            batch = {k: v.to(device) if torch.is_tensor(v) else v for k, v in batch.items()}
             data_time += time.time() - start_time
             logs = model.train_step(batch)  
             train_logs.append(logs)
-            # train_logs.append({k: utils.tonp(v) for k, v in logs.items()})
+            
         # save logs for the batch
         if cur_iter % args.eval_freq == 0 or cur_iter >= args.iters:
             test_start_time = time.time()
             test_logs,valid_logs = [], []
             for batch in test_loader:
-                batch = {k: v.to(device) for k, v in batch.items()}
+                batch = {k: v.to(device)  if torch.is_tensor(v) else v for k, v in batch.items()}
                 logs = model.test_step(batch)
                 test_logs.append(logs)
+            
             for batch in valid_loader:
-                batch = {k: v.to(device) for k, v in batch.items()}
+                batch = {k: v.to(device)  if torch.is_tensor(v) else v for k, v in batch.items()}
                 logs = model.test_step(batch)
                 valid_logs.append(logs)
+                
             test_logs = utils.agg_all_metrics(test_logs)
             valid_logs = utils.agg_all_metrics(valid_logs)
             test_it_time = time.time()-test_start_time
-            best_metrics =  max(test_logs['kappa'], best_metrics)
-            if float(valid_logs['kappa'])>best_valid_metrics:
-                best_valid_metrics = valid_logs['kappa']
-                best_metrics_with_valid =  float(test_logs['kappa'])
-            if args.neptune:
-                run["metrics/test/accuracy"].log(test_logs['acc'])
-                run["metrics/test/kappa"].log(test_logs['kappa'])
-                run["metrics/test/loss"].log(test_logs['loss'])
-                run["metrics/valid/accuracy"].log(valid_logs['acc'])
-                run["metrics/valid/kappa"].log(valid_logs['kappa'])
-                run["metrics/valid/loss"].log(valid_logs['loss'])
-                run["metrics/test/best_kappa"].log(best_metrics)
-                run["metrics/test/best_kappa_with_valid"].log(best_metrics_with_valid)
-
             it_time += time.time() - start_time
             train_logs = utils.agg_all_metrics(train_logs)
+            #Logging
+            for key in valid_logs:
+                if float(valid_logs[key])>best_valid_metrics[key]:
+                    best_valid_metrics[key] = float(valid_logs[key])
+                    best_metrics_with_valid[key] = float(test_logs[key])
+            for key in test_logs:
+                if float(test_logs[key])>best_metrics[key]:
+                    best_metrics[key] = float(test_logs[key])
             if args.neptune:
-                run["metrics/train/accuracy"].log(train_logs['acc'])
-                run["metrics/train/kappa"].log(train_logs['kappa'])
-                run["metrics/train/loss"].log(train_logs['loss'])
+                for key in test_logs:
+                    run["metrics/test/"+key].log(test_logs[key])
+                for key in valid_logs:
+                    run["metrics/valid/"+key].log(valid_logs[key])
+                for key in train_logs:
+                    run["metrics/train/"+key].log(train_logs[key])
+                for key in best_metrics:
+                    run["metrics/test/best_"+key].log(best_metrics[key])
+                for key in best_metrics_with_valid:
+                    run["metrics/test/best_"+key+"_with_valid"].log(best_metrics_with_valid[key])
                 run["logs/train/it_time"].log(it_time)
                 run["logs/cur_iter"].log(cur_iter)
             data_time, it_time = 0, 0
