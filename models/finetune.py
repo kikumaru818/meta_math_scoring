@@ -82,6 +82,7 @@ class BaseModel(nn.Module):
             self.testset = [d['test'] for d in data]
             self.max_label = [max(d['train_dist'].keys()) for d in data]
             self.min_label = [min(d['train_dist'].keys()) for d in data]
+            self.majority_class = [max(d['test_dist'].values()) for d in data]
             for task_id in range(len(self.params.task_lists)):
                 for d in self.trainset[task_id]:
                     d['tid'] = task_id

@@ -87,7 +87,7 @@ def main():
     model.prepare_data()
     model.prepare_model()
     #
-    if args.neptune:
+    if args.neptune and not isinstance(model.majority_class, list):
         run["parameters/majority_class"] = model.majority_class
         run["parameters/n_labels"] = model.max_label-model.min_label +1
 
