@@ -41,7 +41,7 @@ def get_run_id():
 
     
 def is_long(combo):
-    return 'short'
+    return 'long'
 
 save = False
 hyperparameters = [

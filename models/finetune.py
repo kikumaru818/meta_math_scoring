@@ -6,7 +6,7 @@ from transformers import AdamW
 import numpy as np
 from tqdm import tqdm
 import copy
-from transformers import AutoModel,AutoTokenizer, AutoModelForSequenceClassification,AutoConfig,GPT2LMHeadModel
+from transformers import AutoModel,AutoTokenizer, AutoModelForSequenceClassification,AutoConfig,GPT2LMHeadModel,get_constant_schedule_with_warmup
 from utils.load_data import load_dataset
 from utils.datautils import CollateWraper
 from utils.utils import open_json
@@ -62,6 +62,7 @@ class BaseModel(nn.Module):
             self.label_ids = self.tokenizer.convert_tokens_to_ids(labels)
         self.model = self.model.to(self.device)
         self.optimizer = AdamW(self.model.parameters(), lr=self.params.lr)
+        self.scheduler = get_constant_schedule_with_warmup(self.optimizer,num_warmup_steps =int(len(self.trainset)//self.params.batch_size)*5  )
         pass
 
 
@@ -113,6 +114,7 @@ class BaseModel(nn.Module):
 
     def grad_step(self):
         self.optimizer.step()
+        self.scheduler.step()
     
     def compute_loss(self,batch, outputs,labels, labels2):
         if self.params.generate=='none':
