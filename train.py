@@ -112,6 +112,11 @@ def main():
             data_time += time.time() - start_time
             logs = model.train_step(batch)  
             train_logs.append(logs)
+            # if len(train_logs)==2:
+            #     break
+        # train_logs = utils.agg_all_metrics(train_logs)
+
+
             
         # save logs for the batch
         if cur_iter % args.eval_freq == 0 or cur_iter >= args.iters:

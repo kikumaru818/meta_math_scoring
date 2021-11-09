@@ -17,15 +17,19 @@ def agg_all_metrics(outputs):
     res = {}
     keys = [k for k in outputs[0].keys() if not isinstance(outputs[0][k], dict)]
     for k in keys:
-        all_logs = np.concatenate([tonp(x[k]).reshape(-1) for x in outputs])
-        if k != 'epoch':
-            res[k] = np.mean(all_logs)
+        if k in {'epoch', 'loss'}:
+            all_logs = np.concatenate([tonp(x[k]).reshape(-1) for x in outputs])
         else:
+            all_logs = np.concatenate([tonp(x[k]).reshape(-1) for x in outputs if len(x[k])>0])
+        if k=='epoch':
             res[k] = all_logs[-1]
+        res[k] = np.mean(all_logs)
+            
     kappa_keys = [k for k in outputs[0].keys() if 'kappa' in k]
     for kappa_key  in kappa_keys:
-        pred_logs =  np.concatenate([tonp(x[kappa_key]['preds']).reshape(-1) for x in outputs])
-        label_logs = np.concatenate([tonp(x[kappa_key]['labels']).reshape(-1) for x in outputs])
+        pred_logs =  np.concatenate([tonp(x[kappa_key]['preds']).reshape(-1) for x in outputs  if len(x[kappa_key])>0])
+
+        label_logs = np.concatenate([tonp(x[kappa_key]['labels']).reshape(-1) for x in outputs if len(x[kappa_key])>0])
         res[kappa_key] = cohen_kappa_score(pred_logs, label_logs,weights= 'quadratic')
     return res
     

@@ -180,6 +180,8 @@ class BaseModel(nn.Module):
         for tid in range(len(self.params.task_lists)):
             flag = task_ids ==tid
             if flag.sum()==0:
+                res['accuracy_'+str(tid)] = []
+                res['kappa_'+str(tid)] =  {}
                 continue
             logits = outputs[tid][flag]
             if loss is None:
