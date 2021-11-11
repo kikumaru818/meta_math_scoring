@@ -1,6 +1,6 @@
 from collections import defaultdict
 from utils.load_data import load_dataset
-from utils.utils import open_json, safe_makedirs
+from utils.utils import dump_json, open_json, safe_makedirs
 import os
 import random
 import time
@@ -100,6 +100,8 @@ def main():
     best_metrics =  defaultdict(lambda: float('-inf'))
     best_metrics_with_valid =  defaultdict(lambda: float('-inf'))
     best_valid_metrics =  defaultdict(lambda: float('-inf'))
+    if args.save:#change later, output only orderif
+        dump_json(args.root+'test_data.json', model.testset)
     while continue_training:
         train_loader, valid_loader,test_loader = model.dataloaders(
             iters=args.iters)
@@ -131,7 +133,8 @@ def main():
                 batch = {k: v.to(device)  if torch.is_tensor(v) else v for k, v in batch.items()}
                 logs = model.test_step(batch)
                 valid_logs.append(logs)
-                
+            if args.save:
+                pred_results = utils.flat_predictions(test_logs)
             test_logs = utils.agg_all_metrics(test_logs)
             valid_logs = utils.agg_all_metrics(valid_logs)
             test_it_time = time.time()-test_start_time
@@ -142,6 +145,9 @@ def main():
                 if float(valid_logs[key])>best_valid_metrics[key]:
                     best_valid_metrics[key] = float(valid_logs[key])
                     best_metrics_with_valid[key] = float(test_logs[key])
+                    # Save 
+                    if args.save:
+                        dump_json(args.root+'preds.json', pred_results)
             for key in test_logs:
                 if float(test_logs[key])>best_metrics[key]:
                     best_metrics[key] = float(test_logs[key])
@@ -158,6 +164,8 @@ def main():
                     run["metrics/test/best_"+key+"_with_valid"].log(best_metrics_with_valid[key])
                 run["logs/train/it_time"].log(it_time)
                 run["logs/cur_iter"].log(cur_iter)
+            
+
             data_time, it_time = 0, 0
             train_logs = []
         if cur_iter >= args.iters:

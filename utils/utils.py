@@ -9,7 +9,13 @@ def tonp(x):
         return np.array(x)
     return x.detach().cpu().numpy()
 
-
+def flat_predictions(outputs):
+    try:
+        pred_logs =  np.concatenate([tonp(x['kappa']['preds']).reshape(-1) for x in outputs])
+        label_logs = np.concatenate([tonp(x['kappa']['labels']).reshape(-1) for x in outputs])
+        return {'preds':pred_logs.tolist(), 'labels':label_logs.tolist()}
+    except KeyError:
+        return {}
 
 def agg_all_metrics(outputs):
     if len(outputs) == 0:
