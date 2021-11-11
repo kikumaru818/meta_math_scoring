@@ -45,8 +45,8 @@ def is_long(combo):
 
 save = False
 hyperparameters = [
-    [('task',), ["Grade 4/2017_DBA_DR04_1715RE1T10_05"]],#[  "Grade 4/2017_DBA_DR04_1715RE1T10_05"]],#, 'facebook/bart-large'
-    [('lm',), ['microsoft/deberta-v2-xlarge']],#'bert-base-uncased','roberta-base','bert-large-uncased','roberta-large','gpt2'
+    [('task',), tasks],#[  "Grade 4/2017_DBA_DR04_1715RE1T10_05"]],#, 'facebook/bart-large'
+    [('lm',), ['microsoft/deberta-v2-xlarge', 'facebook/bart-large']],#'bert-base-uncased','roberta-base','bert-large-uncased','roberta-large','gpt2'
     # [('lm',), ['gpt2']],#'bert-base-uncased','roberta-base','bert-large-uncased','roberta-large','gpt2'
     # [('losses',), ['cce;qwp', 'cce', 'qwp']],
     [('losses',), [ 'cce']],
@@ -59,11 +59,11 @@ hyperparameters = [
 
 def get_gpu(combo):
     # return 'rtx8000'
-    if 'large' in combo['lm']:
+    if 'xlarge' in combo['lm']:
         return "m40"
     if 'cce' in combo['losses']:
-        return "m40"
-    return "m40"
+        return "1080ti"
+    return "1080ti"
 
     
 def is_valid(combo):
