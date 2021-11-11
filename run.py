@@ -45,8 +45,8 @@ def is_long(combo):
 
 save = False
 hyperparameters = [
-    [('task',), ["Grade 4/2017_DBA_DR04_1715RE1T10_05"]],#[  "Grade 4/2017_DBA_DR04_1715RE1T10_05"]],
-    [('lm',), ['facebook/bart-large']],#'bert-base-uncased','roberta-base','bert-large-uncased','roberta-large','gpt2'
+    [('task',), ["Grade 4/2017_DBA_DR04_1715RE1T10_05"]],#[  "Grade 4/2017_DBA_DR04_1715RE1T10_05"]],#, 'facebook/bart-large'
+    [('lm',), ['microsoft/deberta-v2-xlarge']],#'bert-base-uncased','roberta-base','bert-large-uncased','roberta-large','gpt2'
     # [('lm',), ['gpt2']],#'bert-base-uncased','roberta-base','bert-large-uncased','roberta-large','gpt2'
     # [('losses',), ['cce;qwp', 'cce', 'qwp']],
     [('losses',), [ 'cce']],
