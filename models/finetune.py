@@ -144,7 +144,9 @@ class BaseModel(nn.Module):
         elif loss_function=='qwp':
             m = nn.Softmax()
             probs = m(output)
-            score = ((torch.arange(self.max_label-self.min_label+1).to(self.device)[None,:]-target[:,None])**2.)/ ((self.max_label-self.min_label)**2.)
+            max_label = self.max_label[self.tid] if isinstance(self.max_label, list) else self.max_label
+            min_label = self.min_label[self.tid] if isinstance(self.min_label, list) else self.min_label
+            score = ((torch.arange(max_label-min_label+1).to(self.device)[None,:]-target[:,None])**2.)/ ((max_label-min_label)**2.)
             loss = torch.sum(score*probs)/ len(target)
         return loss
     
@@ -178,6 +180,7 @@ class BaseModel(nn.Module):
         loss = None
         res = {}
         for tid in range(len(self.params.task_lists)):
+            self.tid = tid
             flag = task_ids ==tid
             if flag.sum()==0:
                 res['accuracy_'+str(tid)] = []
