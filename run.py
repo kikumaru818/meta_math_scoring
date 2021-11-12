@@ -41,11 +41,11 @@ def get_run_id():
 
     
 def is_long(combo):
-    return 'short'
+    return 'long'
 
 save = False
 hyperparameters = [
-    [('task',), tasks[:8]],#[  "Grade 4/2017_DBA_DR04_1715RE1T10_05"]],#, 'facebook/bart-large','microsoft/deberta-v2-xlarge', 'facebook/bart-large'
+    [('task',), 'all'],#[  "Grade 4/2017_DBA_DR04_1715RE1T10_05"]],#, 'facebook/bart-large','microsoft/deberta-v2-xlarge', 'facebook/bart-large'
     [('lm',), ['bert-base-uncased']],#'bert-base-uncased','roberta-base','bert-large-uncased','roberta-large','gpt2'
     # [('lm',), ['gpt2']],#'bert-base-uncased','roberta-base','bert-large-uncased','roberta-large','gpt2'
     # [('losses',), ['cce;qwp', 'cce', 'qwp']],
