@@ -7,25 +7,36 @@ import os
 SEED = 999
 RAW_DIR = "../data/NAEP_AS_Challenge_Data/Items for Item-Specific Models/"
 HASH_PATH =  'data/tasks_hash.json'
-schema = {'bl':0, 'l1':1, 'l2':2, 'sx':3, 'rc':4, 'an':5, 'wc':6, 'txt':7}
+#schema = {'bl':0, 'l1':1, 'l2':2, 'sx':3, 'rc':4, 'an':5, 'wc':6, 'txt':7}
 def safe_parse(val):
     try:
         return int(val)
     except ValueError:
         return -1
 
+def compute_mapper(header):
+    words = header.strip('\n').split(',')
+    words = {w:i for i,w in enumerate(words)}
+    #BookletNumber	Score1	Score2	DSEX	SRACE10	ACCnum	WordCount	ReadingTextResponse
+    schema = {'bl': words["BookletNumber"],'l1':words['Score1'], 'l2':words['Score2'], 'sx':words['DSEX'], 'rc':words['SRACE10'], 'an': words['ACCnum'],'wc': words['WordCount'], 'txt': words['ReadingTextResponse']
+    }
+    return schema
+
 def parse_csv(filename):
     data = []
     path_ = os.path.normpath(filename)
-    #filename = filename.replace(' ', '\\ ')
-    with open(path_, 'r') as fp:
+    with open(path_, 'r',encoding='utf-8-sig') as fp:
         lines = fp.readlines()
+        schema =  compute_mapper(lines[0])
         for line in lines[1:]:
             line = line.strip('\n')
             words = line.split(',')
             out = {}
             for k,v in schema.items():
-                out[k] = words[v] if k not in {'l1', 'l2', 'wc'} else safe_parse(words[v])
+                if k =='txt':
+                    out[k] =  ','.join(words[v:])
+                else:
+                    out[k] = words[v] if k not in {'l1', 'l2', 'wc'} else safe_parse(words[v])
             if out['l1']==-1 and out['l2'] ==-1:
                 continue
             data.append(out)
