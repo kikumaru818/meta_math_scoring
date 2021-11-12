@@ -73,7 +73,7 @@ def main():
         yaml.dump(vars(args), outfile, default_flow_style=False)
     if args.neptune:
         import neptune.new as neptune
-        project = "arighosh/naep"
+        project = "arighosh/naep2"
         run = neptune.init(
                 project=project,
                 api_token=os.environ["NEPTUNE_API_TOKEN"],
