@@ -206,8 +206,12 @@ class BaseModel(nn.Module):
                 self.update_passage_cache()
             self.counter += 1
             self.append_passage_question_embeddings(batch)
-
-        outputs = self.model(**batch)
+        try:
+            outputs = self.model(**batch)
+        except RuntimeError:
+            for k,v in batch.items():
+                print(k, v.shape)
+            assert 1==5, 'Runtime Error'
         if self.params.task=='all':
             self.is_training = True
             return self.multitask_loss(outputs,labels,labels2,task_ids)
