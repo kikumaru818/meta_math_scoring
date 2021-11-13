@@ -45,7 +45,7 @@ class BaseModel(nn.Module):
     
     def prepare_model(self):
         if self.params.task!='all':
-            self.config = AutoConfig.from_pretrained(self.params.lm,num_labels=self.max_label-self.min_label+1,max_position_embeddings = 1024)
+            self.config = AutoConfig.from_pretrained(self.params.lm,num_labels=self.max_label-self.min_label+1)
         else:
             self.config = AutoConfig.from_pretrained(self.params.lm)
         self.tokenizer = AutoTokenizer.from_pretrained(self.params.lm)
@@ -182,9 +182,9 @@ class BaseModel(nn.Module):
         concat_token_type_ids = torch.ones(len(input_embedding),len(self.passage_embedding)+2).long().to(self.device)
         attention_mask = torch.cat([concat_attention_mask, batch['attention_mask']], dim=1)
         token_type_ids = torch.cat([concat_token_type_ids, batch['token_type_ids']], dim=1)
-        batch['attention_mask'] = attention_mask
-        batch['token_type_ids'] = token_type_ids
-        batch['inputs_embeds'] =  input_embeds
+        batch['attention_mask'] = attention_mask[:, :self.config.max_position_embeddings]
+        batch['token_type_ids'] = token_type_ids[:, :self.config.max_position_embeddings]
+        batch['inputs_embeds'] =  input_embeds[:, :self.config.max_position_embeddings]
         del batch['input_ids']
         pass
 
