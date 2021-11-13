@@ -52,7 +52,7 @@ hyperparameters = [
     # [('losses',), ['cce;qwp', 'cce', 'qwp']],
     [('losses',), [ 'cce' ]],
     [('generate',), ['none']],
-    [('lr',), [1e-5]],#2e-4
+    [('lr',), [2e-5]],#2e-4
     [('iters',), [20]],
     [('seed',), [999]],
     [('batch_size',), [32]],

@@ -69,7 +69,7 @@ class BaseModel(nn.Module):
             self.label_ids = self.tokenizer.convert_tokens_to_ids(labels)
         self.model = self.model.to(self.device)
         self.optimizer = AdamW(self.model.parameters(), lr=self.params.lr)
-        self.scheduler = get_constant_schedule_with_warmup(self.optimizer,num_warmup_steps =int(len(self.trainset)//self.params.batch_size)*5  )
+        self.scheduler = get_constant_schedule_with_warmup(self.optimizer,num_warmup_steps =min(int(len(self.trainset)//self.params.batch_size),self.params.max_epochs)*5  )
         if self.params.include_passage:
             if self.params.task!='all':
                 self.question =  tokenize_function(self.tokenizer, self.question)

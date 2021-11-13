@@ -25,8 +25,8 @@ def add_learner_params():
     parser.add_argument('--update_every', default=10, type=int,
                         help='update passage and question embedding every update_every epochs')
     
-    parser.add_argument('--task', default="Grade 4/2017_DBA_DR04_1715RE4T05G04_06",help='Dataset')
-    # parser.add_argument('--task', default="all",help='Dataset')
+    # parser.add_argument('--task', default="Grade 4/2017_DBA_DR04_1715RE4T05G04_06",help='Dataset')
+    parser.add_argument('--task', default="all",help='Dataset')
     parser.add_argument('--generate', default='none',help= 'generate last token, none or score or verb')
     parser.add_argument('--losses', default="cce",help='; separated losses among cce, qwp e.g. cce;qwp')
     parser.add_argument('--labels2', action='store_false', help='consider second label with average weight')
@@ -41,15 +41,15 @@ def add_learner_params():
     parser.add_argument('--lr', default=1e-5, type=float,
                         help='Base learning rate')
     # trainer params
-    #parser.add_argument('--save_freq', default=1000000000000,
-    #                    type=int, help='Frequency to save the model')
+    parser.add_argument('--max_epochs', default=500,
+                        type=int, help='max epochs inside a iteration')
     parser.add_argument('--eval_freq', default=1,
                         type=int, help='Evaluation frequency')
     parser.add_argument('--workers', default=2, type=int,
                         help='The number of data loader workers')
     parser.add_argument('--seed', default=999, type=int, help='Random seed')
     # parallelizm params:
-    parser.add_argument('--batch_size', default=100, type=int)
+    parser.add_argument('--batch_size', default=32, type=int)
     # extras
     parser.add_argument('--cuda', action='store_true')
     parser.add_argument('--save', action='store_true')
@@ -118,6 +118,8 @@ def main():
             data_time += time.time() - start_time
             logs = model.train_step(batch)  
             train_logs.append(logs)
+            if len(train_logs)== args.max_epochs:
+                break
             # if len(train_logs)==2:
             #     break
         # train_logs = utils.agg_all_metrics(train_logs)
