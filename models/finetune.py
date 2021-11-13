@@ -10,6 +10,7 @@ from transformers import AutoModel,AutoTokenizer, AutoModelForSequenceClassifica
 from utils.load_data import load_dataset
 from utils.datautils import CollateWraper, tokenize_function
 from utils.utils import open_json
+from torch.nn.utils.rnn import pad_sequence
 
 score_mapper = {
                 'verb':
@@ -21,15 +22,20 @@ score_mapper = {
 class MultitaskModel(nn.Module):
     def __init__(self, model):
         super().__init__()
-        self.base_model = AutoModel.from_pretrained(model.params.lm)
+        self.bert = AutoModel.from_pretrained(model.params.lm)
         classifier_dropout = (
             model.config.hidden_dropout_prob
         )
         self.dropout = nn.Dropout(classifier_dropout)
         self.layers = nn.ModuleList([nn.Linear(model.config.hidden_size, model.max_label[idx]-model.min_label[idx]+1) for idx in range(len(model.max_label))])
 
-    def forward(self, input_ids,token_type_ids, attention_mask):
-        outputs = self.base_model(input_ids,token_type_ids=token_type_ids, attention_mask=attention_mask)
+    def forward(self, input_ids=None,token_type_ids=None, attention_mask=None, inputs_embeds=None):
+        if input_ids is not None:
+            outputs = self.bert(input_ids,token_type_ids=token_type_ids, attention_mask=attention_mask)
+        elif inputs_embeds is not None:
+            outputs = self.bert(inputs_embeds=inputs_embeds,token_type_ids=token_type_ids, attention_mask=attention_mask)
+        else:
+            raise AssertionError('Pass Input Embeds or input_ids')
         outputs = self.dropout(outputs[1])
         outputs = [layer(outputs) for layer in self.layers]
         return outputs
@@ -65,10 +71,16 @@ class BaseModel(nn.Module):
         self.optimizer = AdamW(self.model.parameters(), lr=self.params.lr)
         self.scheduler = get_constant_schedule_with_warmup(self.optimizer,num_warmup_steps =int(len(self.trainset)//self.params.batch_size)*5  )
         if self.params.include_passage:
-            self.question =  tokenize_function(self.tokenizer, self.question)
-            self.passage = tokenize_function(self.tokenizer, self.passage)
-            self.question = {k: v.to(self.device) if torch.is_tensor(v) else v for k, v in self.question.items()}
-            self.passage = {k: v.to(self.device) if torch.is_tensor(v) else v for k, v in self.passage.items()}
+            if self.params.task!='all':
+                self.question =  tokenize_function(self.tokenizer, self.question)
+                self.passage = tokenize_function(self.tokenizer, self.passage)
+                self.question = {k: v.to(self.device) if torch.is_tensor(v) else v for k, v in self.question.items()}
+                self.passage = {k: v.to(self.device) if torch.is_tensor(v) else v for k, v in self.passage.items()}
+            else:
+                self.question =  [tokenize_function(self.tokenizer, d) for d in self.question]
+                self.passage = [tokenize_function(self.tokenizer, d) for d in self.passage]
+                self.question = [{k: v.to(self.device) if torch.is_tensor(v) else v for k, v in d.items()} for d in self.question]
+                self.passage = [{k: v.to(self.device) if torch.is_tensor(v) else v for k, v in d.items()} for d in self.passage]
         pass
 
 
@@ -86,7 +98,6 @@ class BaseModel(nn.Module):
                 questions, passages = open_json('data/questions.json'), open_json('data/task_passages.json')
                 self.question =   [questions[self.params.task]]
                 self.passage = passages[passages[self.params.task]]
-            pass
         else:
             self.params.task_lists = open_json('data/tasks.json')
             data = [load_dataset(task, create_hash=False,train=0.6, valid=0.2) for task in self.params.task_lists]
@@ -109,6 +120,10 @@ class BaseModel(nn.Module):
             self.trainset =  sum(self.trainset, [])
             self.validset =  sum(self.validset, [])
             self.testset =  sum(self.testset, [])
+            if self.params.include_passage:
+                questions, passages = open_json('data/questions.json'),     open_json('data/task_passages.json')
+                self.question =   [ [questions[d]] for d in self.params.task_lists]
+                self.passage = [passages[passages[d]] for d in self.params.task_lists]
 
                 
             
@@ -167,24 +182,41 @@ class BaseModel(nn.Module):
     
     def update_passage_cache(self):
         with torch.no_grad():
-            self.passage_embedding = self.model(**self.passage, output_hidden_states=True).hidden_states[-1][:,0]
-            self.question_embedding = self.model(**self.question, output_hidden_states=True).hidden_states[-1][:,0]
-            pass
+            if self.params.task!='all':
+                self.passage_embedding = self.model(**self.passage, output_hidden_states=True).hidden_states[-1][:,0]
+                self.question_embedding = self.model(**self.question, output_hidden_states=True).hidden_states[-1][:,0]
+            else:
+                self.passage_embedding = [self.model.bert(**d, output_hidden_states=True).hidden_states[-1][:,0] for d in self.passage]
+                self.question_embedding = [self.model.bert(**d, output_hidden_states=True).hidden_states[-1][:,0]  for d in self.question]
 
-    def append_passage_question_embeddings(self,batch):
+    def append_passage_question_embeddings(self,batch, task_ids):
         input_ids = batch['input_ids']
         input_ids[:,0]=  self.tokenizer.convert_tokens_to_ids('[SEP]')
         class_tokens = torch.zeros(len(input_ids),1).long().to(self.device)+self.tokenizer.convert_tokens_to_ids('[CLS]')
         input_embedding  = self.model.bert.embeddings.word_embeddings(input_ids)
         class_embedding = self.model.bert.embeddings.word_embeddings(class_tokens)
-        input_embeds = torch.cat([class_embedding, self.question_embedding[None,:,:].expand(len(input_ids),-1,-1), self.passage_embedding[None,:,:].expand(len(input_ids),-1,-1), input_embedding], dim =1)
-        concat_attention_mask = torch.ones(len(input_embedding),len(self.passage_embedding)+2).long().to(self.device)
-        concat_token_type_ids = torch.ones(len(input_embedding),len(self.passage_embedding)+2).long().to(self.device)
-        attention_mask = torch.cat([concat_attention_mask, batch['attention_mask']], dim=1)
-        token_type_ids = torch.cat([concat_token_type_ids, batch['token_type_ids']], dim=1)
+        if task_ids is None:
+            input_embeds = torch.cat([class_embedding, self.question_embedding[None,:,:].expand(len(input_ids),-1,-1), self.passage_embedding[None,:,:].expand(len(input_ids),-1,-1), input_embedding], dim =1)
+            concat_attention_mask = torch.ones(len(input_embedding),len(self.passage_embedding)+2).long().to(self.device)
+            concat_token_type_ids = torch.zeros(len(input_embedding),len(self.passage_embedding)+2).long().to(self.device)
+            attention_mask = torch.cat([concat_attention_mask, batch['attention_mask']], dim=1)
+            token_type_ids = torch.cat([concat_token_type_ids, batch['token_type_ids']], dim=1)
+        else:
+            input_embeds, attention_mask, token_type_ids = [], [], []
+            for idx in range(len(input_ids)):
+                embeds = torch.cat([class_embedding[idx], self.question_embedding[task_ids[idx]],  self.passage_embedding[task_ids[idx]], input_embedding[idx]         ], dim =0)
+                mask = torch.cat([torch.ones(len(self.passage_embedding[task_ids[idx]])+2).long().to(self.device), batch['attention_mask'][idx]   ], dim =0)
+                token_ids = torch.cat([torch.zeros(len(self.passage_embedding[task_ids[idx]])+2).long().to(self.device), batch['token_type_ids'][idx]   ], dim =0)
+                input_embeds.append(embeds)
+                attention_mask.append(mask)
+                token_type_ids.append(token_ids)
+            input_embeds =  pad_sequence(input_embeds,batch_first=True)
+            attention_mask =  pad_sequence(attention_mask,batch_first=True)
+            token_type_ids =  pad_sequence(token_type_ids,batch_first=True)
         batch['attention_mask'] = attention_mask[:, :self.config.max_position_embeddings]
         batch['token_type_ids'] = token_type_ids[:, :self.config.max_position_embeddings]
         batch['inputs_embeds'] =  input_embeds[:, :self.config.max_position_embeddings]
+            
         del batch['input_ids']
         pass
 
@@ -200,12 +232,14 @@ class BaseModel(nn.Module):
         if 'tid' in batch:
             task_ids = batch['tid']
             del batch['tid']
+        else:
+            task_ids = None
 
         if self.params.include_passage:# update passage and question embeddings
             if self.counter%self.params.update_every==0:
                 self.update_passage_cache()
             self.counter += 1
-            self.append_passage_question_embeddings(batch)
+            self.append_passage_question_embeddings(batch, task_ids)
         try:
             outputs = self.model(**batch)
         except RuntimeError:
@@ -268,8 +302,10 @@ class BaseModel(nn.Module):
         if 'tid' in batch:
             task_ids = batch['tid']
             del batch['tid']
+        else:
+            task_ids = None
         if self.params.include_passage:# update passage and question embeddings
-            self.append_passage_question_embeddings(batch)
+            self.append_passage_question_embeddings(batch,task_ids)
 
         with torch.no_grad():
             outputs = self.model(**batch)
