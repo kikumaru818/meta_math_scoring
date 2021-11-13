@@ -25,7 +25,7 @@ def add_learner_params():
     parser.add_argument('--update_every', default=10, type=int,
                         help='update passage and question embedding every update_every epochs')
     
-    parser.add_argument('--task', default="Grade 4/2017_DBA_DR04_1715RE4T05G04_03",help='Dataset')
+    parser.add_argument('--task', default="Grade 4/2017_DBA_DR04_1715RE4T05G04_06",help='Dataset')
     # parser.add_argument('--task', default="all",help='Dataset')
     parser.add_argument('--generate', default='none',help= 'generate last token, none or score or verb')
     parser.add_argument('--losses', default="cce",help='; separated losses among cce, qwp e.g. cce;qwp')

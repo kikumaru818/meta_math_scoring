@@ -265,7 +265,7 @@ class BaseModel(nn.Module):
             task_ids = batch['tid']
             del batch['tid']
         if self.params.include_passage:# update passage and question embeddings
-            batch = self.append_passage_question_embeddings(batch)
+            self.append_passage_question_embeddings(batch)
 
         with torch.no_grad():
             outputs = self.model(**batch)
