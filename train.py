@@ -20,8 +20,11 @@ def add_learner_params():
                         help='slurm partitions for the experiment')
     # problem definition
     parser.add_argument('--lm', default='bert-base-uncased',
-                        help='Base Language model'
-                        )
+                        help='Base Language model')
+    parser.add_argument('--include_passage', action='store_true')
+    parser.add_argument('--update_every', default=10, type=int,
+                        help='update passage and question embedding every update_every epochs')
+    
     parser.add_argument('--task', default="Grade 4/2017_DBA_DR04_1715RE4T05G04_03",help='Dataset')
     # parser.add_argument('--task', default="all",help='Dataset')
     parser.add_argument('--generate', default='none',help= 'generate last token, none or score or verb')
@@ -90,6 +93,7 @@ def main():
     if args.neptune and not isinstance(model.majority_class, list):
         run["parameters/majority_class"] = model.majority_class
         run["parameters/n_labels"] = model.max_label-model.min_label +1
+        run["parameters/human_kappa"] = model.human_kappa
 
     ###
     cur_iter = 0

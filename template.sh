@@ -18,5 +18,5 @@ python train.py\
     --batch_size {batch_size}\
     --seed {seed}\
     --iters {iters}\
-    --neptune --cuda\
+    {fixed_params}\
     --name "${SLURM_JOB_ID}" --nodes "${SLURM_JOB_NODELIST}" --slurm_partition "${SLURM_JOB_PARTITION}"

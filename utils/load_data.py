@@ -1,5 +1,6 @@
 #from transformers.utils.logging import remove_handler
-from utils.utils import open_json,dump_json
+import utils
+from utils.utils import open_json,dump_json, human_kappa
 from collections import defaultdict
 import hashlib
 import random
@@ -84,7 +85,9 @@ def load_dataset(task, create_hash, train,valid):
     val_file = RAW_DIR+task+"/"+task.split('/')[1]+"_Validation_DS&SS.csv"
     data, data_2  =  parse_csv(train_file), parse_csv(val_file)
     data.extend(data_2)
+    best_kappa = human_kappa(data)
     data, hashes = create_splits(data, train,valid)
+    data['human_kappa'] = best_kappa
     tasks_hash = open_json(HASH_PATH)
     if create_hash:
         tasks_hash[task] = {'train':hashes['train'], 'valid':hashes['valid'], 'test':hashes['test']}

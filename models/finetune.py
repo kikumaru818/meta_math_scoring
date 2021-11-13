@@ -8,7 +8,7 @@ from tqdm import tqdm
 import copy
 from transformers import AutoModel,AutoTokenizer, AutoModelForSequenceClassification,AutoConfig,GPT2LMHeadModel,get_constant_schedule_with_warmup
 from utils.load_data import load_dataset
-from utils.datautils import CollateWraper
+from utils.datautils import CollateWraper, tokenize_function
 from utils.utils import open_json
 
 score_mapper = {
@@ -40,6 +40,7 @@ class BaseModel(nn.Module):
         super().__init__()
         self.params = copy.deepcopy(params)
         self.device = device
+        self.counter = 0
         
     
     def prepare_model(self):
@@ -63,6 +64,11 @@ class BaseModel(nn.Module):
         self.model = self.model.to(self.device)
         self.optimizer = AdamW(self.model.parameters(), lr=self.params.lr)
         self.scheduler = get_constant_schedule_with_warmup(self.optimizer,num_warmup_steps =int(len(self.trainset)//self.params.batch_size)*5  )
+        if self.params.include_passage:
+            self.question =  tokenize_function(self.tokenizer, self.question)
+            self.passage = tokenize_function(self.tokenizer, self.passage)
+            self.question = {k: v.to(self.device) if torch.is_tensor(v) else v for k, v in self.question.items()}
+            self.passage = {k: v.to(self.device) if torch.is_tensor(v) else v for k, v in self.passage.items()}
         pass
 
 
@@ -75,6 +81,12 @@ class BaseModel(nn.Module):
             self.max_label = max(data['train_dist'].keys())
             self.min_label = min(data['train_dist'].keys())
             self.majority_class = max(data['test_dist'].values())
+            self.human_kappa = data['human_kappa']
+            if self.params.include_passage:
+                questions, passages = open_json('data/questions.json'), open_json('data/task_passages.json')
+                self.question =   [questions[self.params.task]]
+                self.passage = passages[passages[self.params.task]]
+            pass
         else:
             self.params.task_lists = open_json('data/tasks.json')
             data = [load_dataset(task, create_hash=False,train=0.6, valid=0.2) for task in self.params.task_lists]
@@ -84,6 +96,9 @@ class BaseModel(nn.Module):
             self.max_label = [max(d['train_dist'].keys()) for d in data]
             self.min_label = [min(d['train_dist'].keys()) for d in data]
             self.majority_class = [max(d['test_dist'].values()) for d in data]
+            self.human_kappa = [d['human_kappa'] for d in data]
+            # for idx, kappa in enumerate(self.human_kappa):
+            #     print(self.params.task_lists[idx],'\t', kappa)
             for task_id in range(len(self.params.task_lists)):
                 for d in self.trainset[task_id]:
                     d['tid'] = task_id
@@ -150,9 +165,31 @@ class BaseModel(nn.Module):
             loss = torch.sum(score*probs)/ len(target)
         return loss
     
+    def update_passage_cache(self):
+        with torch.no_grad():
+            self.passage_embedding = self.model(**self.passage, output_hidden_states=True).hidden_states[-1][:,0]
+            self.question_embedding = self.model(**self.question, output_hidden_states=True).hidden_states[-1][:,0]
+            pass
+
+    def append_passage_question_embeddings(self,batch):
+        input_ids = batch['input_ids']
+        input_ids[:,0]=  self.tokenizer.convert_tokens_to_ids('[SEP]')
+        class_tokens = torch.zeros(len(input_ids),1).long().to(self.device)+self.tokenizer.convert_tokens_to_ids('[CLS]')
+        input_embedding  = self.model.bert.embeddings.word_embeddings(input_ids)
+        class_embedding = self.model.bert.embeddings.word_embeddings(class_tokens)
+        input_embeds = torch.cat([class_embedding, self.question_embedding[None,:,:].expand(len(input_ids),-1,-1), self.passage_embedding[None,:,:].expand(len(input_ids),-1,-1), input_embedding], dim =1)
+        concat_attention_mask = torch.ones(len(input_embedding),len(self.passage_embedding)+2).long().to(self.device)
+        concat_token_type_ids = torch.ones(len(input_embedding),len(self.passage_embedding)+2).long().to(self.device)
+        attention_mask = torch.cat([concat_attention_mask, batch['attention_mask']], dim=1)
+        token_type_ids = torch.cat([concat_token_type_ids, batch['token_type_ids']], dim=1)
+        batch['attention_mask'] = attention_mask
+        batch['token_type_ids'] = token_type_ids
+        batch['inputs_embeds'] =  input_embeds
+        del batch['input_ids']
+        pass
+
     def train_step(self, batch):
         self.zero_grad()
-        #
         labels = batch['labels']
         del batch['labels']
         if 'labels2' in batch:
@@ -163,6 +200,13 @@ class BaseModel(nn.Module):
         if 'tid' in batch:
             task_ids = batch['tid']
             del batch['tid']
+
+        if self.params.include_passage:# update passage and question embeddings
+            if self.counter%self.params.update_every==0:
+                self.update_passage_cache()
+            self.counter += 1
+            self.append_passage_question_embeddings(batch)
+
         outputs = self.model(**batch)
         if self.params.task=='all':
             self.is_training = True
@@ -220,6 +264,9 @@ class BaseModel(nn.Module):
         if 'tid' in batch:
             task_ids = batch['tid']
             del batch['tid']
+        if self.params.include_passage:# update passage and question embeddings
+            batch = self.append_passage_question_embeddings(batch)
+
         with torch.no_grad():
             outputs = self.model(**batch)
         if self.params.task=='all':

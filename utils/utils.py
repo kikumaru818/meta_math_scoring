@@ -4,6 +4,12 @@ import numpy as np
 import torch
 from sklearn.metrics import cohen_kappa_score
 
+def human_kappa(data):
+    labels = [[d['l1'], d['l2']] for d in data if d['l1']>=0 and d['l2']>=0 ]
+    pred_logs = [d[0] for d in labels]
+    label_logs = [d[1] for d in labels]
+    return cohen_kappa_score(pred_logs, label_logs,weights= 'quadratic')
+
 def tonp(x):
     if isinstance(x, (np.ndarray, float, int)):
         return np.array(x)
