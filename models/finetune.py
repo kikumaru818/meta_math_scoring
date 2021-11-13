@@ -45,7 +45,7 @@ class BaseModel(nn.Module):
     
     def prepare_model(self):
         if self.params.task!='all':
-            self.config = AutoConfig.from_pretrained(self.params.lm,num_labels=self.max_label-self.min_label+1)
+            self.config = AutoConfig.from_pretrained(self.params.lm,num_labels=self.max_label-self.min_label+1,max_position_embeddings = 1024)
         else:
             self.config = AutoConfig.from_pretrained(self.params.lm)
         self.tokenizer = AutoTokenizer.from_pretrained(self.params.lm)
