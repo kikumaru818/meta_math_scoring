@@ -41,7 +41,7 @@ def add_learner_params():
     parser.add_argument('--lr', default=1e-5, type=float,
                         help='Base learning rate')
     # trainer params
-    parser.add_argument('--max_epochs', default=500,
+    parser.add_argument('--max_epochs', default=1000,
                         type=int, help='max epochs inside a iteration')
     parser.add_argument('--eval_freq', default=1,
                         type=int, help='Evaluation frequency')
