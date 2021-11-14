@@ -98,6 +98,12 @@ class BaseModel(nn.Module):
                 questions, passages = open_json('data/questions.json'), open_json('data/task_passages.json')
                 self.question =   [questions[self.params.task]]
                 self.passage = passages[passages[self.params.task]]
+            if self.params.include_question:
+                question = open_json('data/questions.json')[self.params.task]
+                for dataset in [self.trainset,self.validset, self.testset]:
+                    for d in dataset:
+                        d['txt'] = question+ ' [SEP] '+d['txt']
+
         else:
             self.params.task_lists = open_json('data/tasks.json')
             data = [load_dataset(task, create_hash=False,train=0.6, valid=0.2) for task in self.params.task_lists]
@@ -124,6 +130,11 @@ class BaseModel(nn.Module):
                 questions, passages = open_json('data/questions.json'),     open_json('data/task_passages.json')
                 self.question =   [ [questions[d]] for d in self.params.task_lists]
                 self.passage = [passages[passages[d]] for d in self.params.task_lists]
+            if self.params.include_question:
+                questions = open_json('data/questions.json')
+                for dataset in [self.trainset,self.validset, self.testset]:
+                    for d in dataset:
+                        d['txt'] = questions[self.params.task_lists[d['tid']]]+ ' [SEP] '+d['txt']
 
                 
             
