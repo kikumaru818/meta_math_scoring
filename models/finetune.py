@@ -102,7 +102,8 @@ class BaseModel(nn.Module):
                 question = open_json('data/questions.json')[self.params.task]
                 for dataset in [self.trainset,self.validset, self.testset]:
                     for d in dataset:
-                        d['txt'] = question+ ' [SEP] '+d['txt']
+                        # d['txt'] = question+ ' [SEP] '+d['txt']
+                        d['txt'] = d['txt']+ ' [SEP] '+question
 
         else:
             self.params.task_lists = open_json('data/tasks.json')
