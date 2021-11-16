@@ -408,9 +408,9 @@ class ProtoModel(BaseModel):
         self.prototypes[tid]['labels2'].append(labels2)
         if len(self.prototypes[tid]['features'])== self.params.proto_count:
             #concat
-            self.stored_prototypes[tid]['features'] = torch.concat(self.prototypes[tid]['features'], dim =0)
-            self.stored_prototypes[tid]['labels'] = torch.concat(self.prototypes[tid]['labels'], dim =0)
-            self.stored_prototypes[tid]['labels2'] = torch.concat(self.prototypes[tid]['labels2'], dim =0)
+            self.stored_prototypes[tid]['features'] = torch.cat(self.prototypes[tid]['features'], dim =0)
+            self.stored_prototypes[tid]['labels'] = torch.cat(self.prototypes[tid]['labels'], dim =0)
+            self.stored_prototypes[tid]['labels2'] = torch.cat(self.prototypes[tid]['labels2'], dim =0)
         return
 
     def train_step(self, batch):
