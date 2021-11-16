@@ -157,7 +157,7 @@ class BaseModel(nn.Module):
                         d['tid'] =  len(self.params.task_lists)-1
                     self.validset.append(dataset)
                     self.trainset.append(dataset)
-                    
+
             self.trainset =  sum(self.trainset, [])
             self.validset =  sum(self.validset, [])
             self.testset =  sum(self.testset, [])
@@ -169,7 +169,8 @@ class BaseModel(nn.Module):
                 questions = open_json('data/questions.json')
                 for dataset in [self.trainset,self.validset, self.testset]:
                     for d in dataset:
-                        d['txt'] = questions[self.params.task_lists[d['tid']]]+ ' [SEP] '+d['txt']
+                        # d['txt'] = questions[self.params.task_lists[d['tid']]]+ ' [SEP] '+d['txt']
+                        d['txt'] = d['txt'] +' [SEP] ' +questions[self.params.task_lists[d['tid']]]
 
                 
             
