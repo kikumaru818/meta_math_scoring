@@ -156,7 +156,7 @@ class BaseModel(nn.Module):
                     for d in dataset:
                         d['tid'] =  len(self.params.task_lists)-1
                     self.validset.append(dataset)
-                    self.trainset.append(dataset)
+                    self.testset.append(dataset)
 
             self.trainset =  sum(self.trainset, [])
             self.validset =  sum(self.validset, [])
