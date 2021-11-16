@@ -1,7 +1,44 @@
+from collections import defaultdict
 import torch
+import random
+from torch.utils.data.sampler import Sampler
 
 def tokenize_function(tokenizer, sentences):
     return tokenizer(sentences, padding=True, truncation=True,return_tensors="pt")
+
+class ProtoSampler(Sampler):
+    def __init__(self, dataset,batch_size,task, test):
+        if task=='all':#all tasks
+            pass
+        else:
+            if test:
+                indices = torch.arange(len(dataset))
+                self.batches = [batch.tolist() for batch in torch.split(indices, batch_size)]
+            else:#train mix and match
+                indices = defaultdict(list)
+                for idx,d in enumerate(dataset):
+                    indices[d['l1'] if d['l1']>=0 else d['l2']].append(idx)
+                for k, v in indices.items():
+                    random.shuffle(v)
+                label_proportion = {k: len(v) for k,v in indices.items()}
+                total_cnt =  sum(label_proportion.values())
+                label_proportion = {k : max(3,int((v*batch_size)/total_cnt)) for k,v in label_proportion.items()}
+                self.batches, offset, flag =[], defaultdict(int) , True
+                while flag:
+                    out = []
+                    for k,v in label_proportion.items():
+                        if offset[k]+v<= len(indices[k]):
+                            out += indices[k][offset[k]: offset[k]+v]
+                            offset[k] +=v
+                        else:  flag = False
+                    if flag: self.batches.append(out)
+                pass
+        
+    def __iter__(self):
+        return iter(self.batches)
+    
+    def __len__(self):
+        return len(self.batches)
 
 class CollateWraper(object):
     def __init__(self, tokenizer,min_label,generate='none'):

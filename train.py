@@ -23,12 +23,15 @@ def add_learner_params():
                         help='Base Language model')
     parser.add_argument('--include_passage', action='store_true')
     parser.add_argument('--single_head', action='store_true')
+    parser.add_argument('--problem', default='base')
     parser.add_argument('--include_question', action='store_true')
     parser.add_argument('--update_every', default=10, type=int,
                         help='update passage and question embedding every update_every epochs')
+    parser.add_argument('--proto_count', default=4, type=int,
+                        help='4x Batch Size number of prototype')
     
-    # parser.add_argument('--task', default="Grade 4/2017_DBA_DR04_1715RE4T05G04_06",help='Dataset')
-    parser.add_argument('--task', default="all",help='Dataset')
+    parser.add_argument('--task', default="Grade 4/2017_DBA_DR04_1715RE4T05G04_06",help='Dataset')
+    # parser.add_argument('--task', default="all",help='Dataset')
     parser.add_argument('--generate', default='none',help= 'generate last token, none or score or verb')
     parser.add_argument('--losses', default="cce",help='; separated losses among cce, qwp e.g. cce;qwp')
     parser.add_argument('--labels2', action='store_false', help='consider second label with average weight')
@@ -88,7 +91,8 @@ def main():
         run["parameters"] = vars(args)
     
     ###
-    model = models.finetune.BaseModel(args, device=device)
+    # model = models.finetune.BaseModel(args, device=device)
+    model = models.REGISTERED_MODELS[args.problem](args, device=device)
     model.prepare_data()
     model.prepare_model()
     #
@@ -119,7 +123,8 @@ def main():
             batch = {k: v.to(device) if torch.is_tensor(v) else v for k, v in batch.items()}
             data_time += time.time() - start_time
             logs = model.train_step(batch)  
-            train_logs.append(logs)
+            if logs is not None:
+                train_logs.append(logs)
             if len(train_logs)== args.max_epochs:
                 break
             # if len(train_logs)==2:

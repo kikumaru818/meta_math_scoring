@@ -1,6 +1,9 @@
+from collections import defaultdict
+import math
 import os
 import torch
 from torch import nn
+from torch._C import device
 from torch.nn import functional as F, parameter
 from transformers import AdamW
 import numpy as np
@@ -8,7 +11,7 @@ from tqdm import tqdm
 import copy
 from transformers import AutoModel,AutoTokenizer, AutoModelForSequenceClassification,AutoConfig,GPT2LMHeadModel,get_constant_schedule_with_warmup
 from utils.load_data import load_dataset
-from utils.datautils import CollateWraper, tokenize_function
+from utils.datautils import CollateWraper, tokenize_function, ProtoSampler
 from utils.utils import open_json
 from torch.nn.utils.rnn import pad_sequence
 
@@ -126,8 +129,8 @@ class BaseModel(nn.Module):
                 question = open_json('data/questions.json')[self.params.task]
                 for dataset in [self.trainset,self.validset, self.testset]:
                     for d in dataset:
-                        # d['txt'] = question+ ' [SEP] '+d['txt']
-                        d['txt'] = d['txt']+ ' [SEP] '+question
+                        d['txt'] = question+ ' [SEP] '+d['txt']
+                        # d['txt'] = d['txt']+ ' [SEP] '+question
 
         else:
             self.params.task_lists = open_json('data/tasks.json')
@@ -363,4 +366,100 @@ class BaseModel(nn.Module):
         return {'loss': loss.detach().cpu(),'accuracy':acc.detach().cpu(),'kappa':{'preds':predictions.detach().cpu(), 'labels':labels.detach().cpu()}}
     
 
+class ProtoModel(BaseModel):
+    def __init__(self, params, device):
+        super().__init__(params,device)
+
+    def prepare_model(self):
+        self.config = AutoConfig.from_pretrained(self.params.lm)
+        self.prototypes =  [None] if self.params.task !='all' else [None]*len(self.params.task_lists)
+        self.stored_prototypes =  [{}] if self.params.task !='all' else [{}]*len(self.params.task_lists)
+        self.tokenizer = AutoTokenizer.from_pretrained(self.params.lm)
+        self.model = AutoModel.from_pretrained(self.params.lm)
+        if self.tokenizer.pad_token is None:
+            self.tokenizer.pad_token = self.tokenizer.eos_token
+            self.config.pad_token_id = self.config.eos_token_id
+        self.model = self.model.to(self.device)
+        self.optimizer = AdamW(self.model.parameters(), lr=self.params.lr)
+        self.scheduler = get_constant_schedule_with_warmup(self.optimizer,num_warmup_steps =min(int(len(self.trainset)//self.params.batch_size * (self.params.proto_count+1)),self.params.max_epochs)*5  )
+
+    def dataloaders(self, iters=None):
+        train_batch_sampler = ProtoSampler(self.trainset, self.params.batch_size, self.params.task, test =False)
+        test_batch_sampler = ProtoSampler(self.testset, self.params.batch_size*2, self.params.task, test =True)
+        valid_batch_sampler = ProtoSampler(self.validset, self.params.batch_size*2, self.params.task, test =True)
+        collate_fn = CollateWraper(self.tokenizer, self.min_label, self.params.generate)
+        train_loader = torch.utils.data.DataLoader(
+            self.trainset, collate_fn=collate_fn, batch_sampler=train_batch_sampler, num_workers=self.params.workers)
+        test_loader = torch.utils.data.DataLoader(
+            self.testset, collate_fn=collate_fn, batch_sampler=test_batch_sampler, num_workers=self.params.workers)
+        valid_loader = torch.utils.data.DataLoader(
+            self.validset, collate_fn=collate_fn, batch_sampler=valid_batch_sampler, num_workers=self.params.workers)
+        return train_loader, valid_loader, test_loader
     
+    def add_prototypes(self,batch,tid):
+        labels, labels2 = batch['labels'], batch['labels2']
+        del batch['labels']
+        del batch['labels2']
+        with torch.no_grad():
+            outputs = self.model(**batch)[1]
+        self.prototypes[tid]['features'].append(outputs)
+        self.prototypes[tid]['labels'].append(labels)
+        self.prototypes[tid]['labels2'].append(labels2)
+        if len(self.prototypes[tid]['features'])== self.params.proto_count:
+            #concat
+            self.stored_prototypes[tid]['features'] = torch.concat(self.prototypes[tid]['features'], dim =0)
+            self.stored_prototypes[tid]['labels'] = torch.concat(self.prototypes[tid]['labels'], dim =0)
+            self.stored_prototypes[tid]['labels2'] = torch.concat(self.prototypes[tid]['labels2'], dim =0)
+        return
+
+    def train_step(self, batch):
+        self.counter += 1
+        tid = int(batch['tid'][0]) if 'tid' in batch else 0
+        if self.counter % (self.params.proto_count+1)==1: #new prototypes
+            self.prototypes[tid] =  {'features':[], 'labels':[], 'labels2':[]}
+        if self.counter % (self.params.proto_count+1)!=0:#Train iteration
+            self.add_prototypes(batch, tid)
+            return None
+        #Training steps
+        labels, labels2 = batch['labels'], batch['labels2']
+        del batch['labels']
+        del batch['labels2']
+        outputs = self.model(**batch)[1]#32*768
+        m = nn.Softmax(dim=-1)
+        outputs =  m(torch.matmul(outputs, self.stored_prototypes[tid]['features'].T)/ math.sqrt(self.config.hidden_size))#32x128
+        proto_weights =  torch.zeros(len(self.stored_prototypes[tid]['features']), self.max_label-self.min_label+1).to(self.device)
+        proto_weights[torch.arange(len(proto_weights)), self.stored_prototypes[tid]['labels']] += 0.5 
+        proto_weights[torch.arange(len(proto_weights)), self.stored_prototypes[tid]['labels2']] += 0.5 
+        outputs = torch.log(torch.matmul(outputs, proto_weights)+1e-7)
+        loss, logits =  self.bert_style_loss(outputs,labels, labels2)
+        loss.backward()
+        self.grad_step()
+        predictions = torch.argmax(logits, dim=-1)
+        acc = predictions==labels
+        return {'loss': loss.detach().cpu(),'acc':acc.detach().cpu(),'kappa':{'preds':predictions.detach().cpu(), 'labels':labels.detach().cpu()}}
+
+    def test_step(self, batch):
+        tid = int(batch['tid'][0]) if 'tid' in batch else 0
+        labels, labels2 = batch['labels'], batch['labels2']
+        del batch['labels']
+        del batch['labels2']
+        with torch.no_grad():
+            outputs = self.model(**batch)[1]#32*768
+            m = nn.Softmax(dim=-1)
+            outputs =  m(torch.matmul(outputs, self.stored_prototypes[tid]['features'].T)/ math.sqrt(self.config.hidden_size))#32x128
+            proto_weights =  torch.zeros(len(self.stored_prototypes[tid]['features']), self.max_label-self.min_label+1).to(self.device)
+            proto_weights[torch.arange(len(proto_weights)), self.stored_prototypes[tid]['labels']] += 0.5 
+            proto_weights[torch.arange(len(proto_weights)), self.stored_prototypes[tid]['labels2']] += 0.5 
+            outputs = torch.log(torch.matmul(outputs, proto_weights)+1e-7)
+            loss, logits =  self.bert_style_loss(outputs,labels, labels2)
+        predictions = torch.argmax(logits, dim=-1)
+        acc = predictions==labels
+        return {'loss': loss.detach().cpu(),'acc':acc.detach().cpu(),'kappa':{'preds':predictions.detach().cpu(), 'labels':labels.detach().cpu()}}
+
+
+
+
+        
+
+
+
