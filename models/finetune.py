@@ -384,6 +384,7 @@ class ProtoModel(BaseModel):
         self.scheduler = get_constant_schedule_with_warmup(self.optimizer,num_warmup_steps =min(int(len(self.trainset)//self.params.batch_size * (self.params.proto_count+1)),self.params.max_epochs)*5  )
 
     def dataloaders(self, iters=None):
+        self.counter = 0
         train_batch_sampler = ProtoSampler(self.trainset, self.params.batch_size, self.params.task, test =False)
         test_batch_sampler = ProtoSampler(self.testset, self.params.batch_size*2, self.params.task, test =True)
         valid_batch_sampler = ProtoSampler(self.validset, self.params.batch_size*2, self.params.task, test =True)
