@@ -23,11 +23,30 @@ class MultitaskModel(nn.Module):
     def __init__(self, model):
         super().__init__()
         self.bert = AutoModel.from_pretrained(model.params.lm)
+        self.single_head = model.params.single_head
         classifier_dropout = (
             model.config.hidden_dropout_prob
         )
         self.dropout = nn.Dropout(classifier_dropout)
-        self.layers = nn.ModuleList([nn.Linear(model.config.hidden_size, model.max_label[idx]-model.min_label[idx]+1) for idx in range(len(model.max_label))])
+        if self.single_head:#single class head:
+            self.ll = nn.Sequential(nn.Linear(model.config.hidden_size, 4), nn.Softmax(dim=-1))
+            self.layers = self.create_mapping(model)
+        else: #class specific heads
+            self.layers = nn.ModuleList([nn.Linear(model.config.hidden_size, model.max_label[idx]-model.min_label[idx]+1) for idx in range(len(model.max_label))])
+    
+    def create_mapping(self, model):
+        weight = []
+        for idx in range(len(model.params.task_lists)):
+            n_label = model.max_label[idx]- model.min_label[idx]+1
+            matrix = torch.zeros((4,n_label),device=model.device, requires_grad=False)
+            if n_label==4:
+                matrix[0,0]=matrix[1,1]=matrix[2,2]=matrix[3,3] =1.
+            elif n_label==3:
+                matrix[0,0]=matrix[3,2] =matrix[1,1]=matrix[2,1] =1.
+            else:
+                matrix[0,0]=matrix[1,0] = matrix[2,1]=matrix[3,1] = 1.
+            weight.append(matrix)
+        return weight
 
     def forward(self, input_ids=None,token_type_ids=None, attention_mask=None, inputs_embeds=None):
         if input_ids is not None:
@@ -37,7 +56,12 @@ class MultitaskModel(nn.Module):
         else:
             raise AssertionError('Pass Input Embeds or input_ids')
         outputs = self.dropout(outputs[1])
-        outputs = [layer(outputs) for layer in self.layers]
+        if self.single_head:#single class head:
+            outputs =  self.ll(outputs)
+            outputs = [torch.matmul(outputs,layer) for layer in self.layers]#probs
+            outputs = [torch.log(output+1e-6) for output in outputs]
+        else:
+            outputs = [layer(outputs) for layer in self.layers]
         return outputs
 
 
@@ -115,8 +139,6 @@ class BaseModel(nn.Module):
             self.min_label = [min(d['train_dist'].keys()) for d in data]
             self.majority_class = [max(d['test_dist'].values()) for d in data]
             self.human_kappa = [d['human_kappa'] for d in data]
-            # for idx, kappa in enumerate(self.human_kappa):
-            #     print(self.params.task_lists[idx],'\t', kappa)
             for task_id in range(len(self.params.task_lists)):
                 for d in self.trainset[task_id]:
                     d['tid'] = task_id
@@ -124,6 +146,18 @@ class BaseModel(nn.Module):
                     d['tid']=  task_id
                 for d in self.testset[task_id]:
                     d['tid']=  task_id
+            if self.params.single_head:
+                generic_tasks = open_json('data/generic_tasks.json')
+                for task, min_label, max_label in generic_tasks:
+                    self.params.task_lists.append(task)
+                    self.min_label.append(min_label)
+                    self.max_label.append(max_label)
+                    dataset = open_json('data/'+task+'.json')
+                    for d in dataset:
+                        d['tid'] =  len(self.params.task_lists)-1
+                    self.validset.append(dataset)
+                    self.trainset.append(dataset)
+                    
             self.trainset =  sum(self.trainset, [])
             self.validset =  sum(self.validset, [])
             self.testset =  sum(self.testset, [])
@@ -252,12 +286,7 @@ class BaseModel(nn.Module):
                 self.update_passage_cache()
             self.counter += 1
             self.append_passage_question_embeddings(batch, task_ids)
-        try:
-            outputs = self.model(**batch)
-        except RuntimeError:
-            for k,v in batch.items():
-                print(k, v.shape)
-            assert 1==5, 'Runtime Error'
+        outputs = self.model(**batch)
         if self.params.task=='all':
             self.is_training = True
             return self.multitask_loss(outputs,labels,labels2,task_ids)
@@ -270,8 +299,10 @@ class BaseModel(nn.Module):
         acc = predictions==labels
         return {'loss': loss.detach().cpu(),'acc':acc.detach().cpu(),'kappa':{'preds':predictions.detach().cpu(), 'labels':labels.detach().cpu()}}
     
+
     def multitask_loss(self,outputs, labels,labels2,task_ids):
         loss = None
+    
         res = {}
         for tid in range(len(self.params.task_lists)):
             self.tid = tid
