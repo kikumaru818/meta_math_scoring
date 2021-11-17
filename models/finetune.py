@@ -373,7 +373,7 @@ class ProtoModel(BaseModel):
     def prepare_model(self):
         self.config = AutoConfig.from_pretrained(self.params.lm)
         self.prototypes =  [None] if self.params.task !='all' else [None]*len(self.params.task_lists)
-        self.stored_prototypes =  [{}] if self.params.task !='all' else [{}]*len(self.params.task_lists)
+        self.stored_prototypes =  [{}] if self.params.task !='all' else [{} for _ in range(len(self.params.task_lists))]
         self.tokenizer = AutoTokenizer.from_pretrained(self.params.lm)
         self.model = AutoModel.from_pretrained(self.params.lm)
         if self.tokenizer.pad_token is None:
@@ -458,9 +458,7 @@ class ProtoModel(BaseModel):
 
     def test_step(self, batch):
         tid = int(batch['tid'][0]) if 'tid' in batch else 0
-        if 'tid' in batch: 
-            tids = batch['tid']
-            del batch['tid']
+        if 'tid' in batch:  del batch['tid']
         labels, labels2 = batch['labels'], batch['labels2']
         del batch['labels']
         del batch['labels2']
@@ -472,18 +470,7 @@ class ProtoModel(BaseModel):
             if 'features' in self.stored_prototypes[tid]:
                 outputs =  m(torch.matmul(outputs, self.stored_prototypes[tid]['features'].T)/ math.sqrt(self.config.hidden_size))#32x128
                 proto_weights =  torch.zeros(len(self.stored_prototypes[tid]['features']), max_label-min_label+1).to(self.device)
-                try:
-                    proto_weights[torch.arange(len(proto_weights)), self.stored_prototypes[tid]['labels']] += 0.5 
-                except:
-                    print(tid)
-                    print('tids', tids.data.cpu().numpy())
-                    print(proto_weights.shape, len(self.stored_prototypes[tid]['features']))
-                    print('labels', min_label, max_label)
-                    print(self.stored_prototypes[tid]['labels'].data.cpu())
-                    for idx in range(len(self.stored_prototypes)):
-                        print(self.stored_prototypes[idx].keys(), self.stored_prototypes[idx].get('labels', []).data.cpu())
-                    raise Exception
-
+                proto_weights[torch.arange(len(proto_weights)), self.stored_prototypes[tid]['labels']] += 0.5 
                 proto_weights[torch.arange(len(proto_weights)), self.stored_prototypes[tid]['labels2']] += 0.5 
             else:
                 outputs = torch.matmul(outputs,outputs.T)/ math.sqrt(self.config.hidden_size)#32x32

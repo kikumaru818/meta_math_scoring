@@ -23,7 +23,7 @@ def add_learner_params():
                         help='Base Language model')
     parser.add_argument('--include_passage', action='store_true')
     parser.add_argument('--single_head', action='store_true')
-    parser.add_argument('--problem', default='proto')
+    parser.add_argument('--problem', default='base')
     parser.add_argument('--include_question', action='store_true')
     parser.add_argument('--update_every', default=10, type=int,
                         help='update passage and question embedding every update_every epochs')
