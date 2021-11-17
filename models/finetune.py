@@ -149,7 +149,7 @@ class BaseModel(nn.Module):
                     d['tid']=  task_id
                 for d in self.testset[task_id]:
                     d['tid']=  task_id
-            if self.params.single_head:
+            if self.params.single_head or self.params.problem=='proto':
                 generic_tasks = open_json('data/generic_tasks.json')
                 for task, min_label, max_label in generic_tasks:
                     self.params.task_lists.append(task)
@@ -385,9 +385,9 @@ class ProtoModel(BaseModel):
 
     def dataloaders(self, iters=None):
         self.counter = 0
-        train_batch_sampler = ProtoSampler(self.trainset, self.params.batch_size, self.params.task, test =False)
-        test_batch_sampler = ProtoSampler(self.testset, self.params.batch_size*2, self.params.task, test =True)
-        valid_batch_sampler = ProtoSampler(self.validset, self.params.batch_size*2, self.params.task, test =True)
+        train_batch_sampler = ProtoSampler(self.trainset, self.params.batch_size, self.params.task,self.params.proto_count, test =False)
+        test_batch_sampler = ProtoSampler(self.testset, self.params.batch_size*2, self.params.task,self.params.proto_count, test =True)
+        valid_batch_sampler = ProtoSampler(self.validset, self.params.batch_size*2, self.params.task,self.params.proto_count, test =True)
         collate_fn = CollateWraper(self.tokenizer, self.min_label, self.params.generate)
         train_loader = torch.utils.data.DataLoader(
             self.trainset, collate_fn=collate_fn, batch_sampler=train_batch_sampler, num_workers=self.params.workers)
@@ -416,19 +416,25 @@ class ProtoModel(BaseModel):
     def train_step(self, batch):
         self.counter += 1
         tid = int(batch['tid'][0]) if 'tid' in batch else 0
+        if 'tid' in batch: del batch['tid']
         if self.counter % (self.params.proto_count+1)==1: #new prototypes
+            self.last_task_id = tid
             self.prototypes[tid] =  {'features':[], 'labels':[], 'labels2':[]}
         if self.counter % (self.params.proto_count+1)!=0:#Train iteration
+            assert self.last_task_id==tid
             self.add_prototypes(batch, tid)
             return None
         #Training steps
+        max_label = self.max_label if self.params.task !='all' else self.max_label[tid]
+        min_label = self.min_label if self.params.task !='all' else self.min_label[tid]
+        assert self.last_task_id==tid
         labels, labels2 = batch['labels'], batch['labels2']
         del batch['labels']
         del batch['labels2']
         outputs = self.model(**batch)[1]#32*768
         m = nn.Softmax(dim=-1)
         outputs =  m(torch.matmul(outputs, self.stored_prototypes[tid]['features'].T)/ math.sqrt(self.config.hidden_size))#32x128
-        proto_weights =  torch.zeros(len(self.stored_prototypes[tid]['features']), self.max_label-self.min_label+1).to(self.device)
+        proto_weights =  torch.zeros(len(self.stored_prototypes[tid]['features']), max_label-min_label+1).to(self.device)
         proto_weights[torch.arange(len(proto_weights)), self.stored_prototypes[tid]['labels']] += 0.5 
         proto_weights[torch.arange(len(proto_weights)), self.stored_prototypes[tid]['labels2']] += 0.5 
         outputs = torch.log(torch.matmul(outputs, proto_weights)+1e-7)
@@ -437,25 +443,56 @@ class ProtoModel(BaseModel):
         self.grad_step()
         predictions = torch.argmax(logits, dim=-1)
         acc = predictions==labels
-        return {'loss': loss.detach().cpu(),'acc':acc.detach().cpu(),'kappa':{'preds':predictions.detach().cpu(), 'labels':labels.detach().cpu()}}
+        if self.params.task !='all':
+            return {'loss': loss.detach().cpu(),'acc':acc.detach().cpu(),'kappa':{'preds':predictions.detach().cpu(), 'labels':labels.detach().cpu()}}
+        res = {'loss': loss.detach().cpu()}
+        for task_id in range(len(self.params.task_lists)):
+            if task_id==tid:
+                res['accuracy_'+str(tid)] = acc.detach().cpu()
+                res['kappa_'+str(tid)] =  {'preds':predictions.detach().cpu(), 'labels':labels.detach().cpu()}
+            else:
+                res['accuracy_'+str(task_id)] = []
+                res['kappa_'+str(task_id)] =  {}
+        return res
+
 
     def test_step(self, batch):
         tid = int(batch['tid'][0]) if 'tid' in batch else 0
+        if 'tid' in batch: del batch['tid']
         labels, labels2 = batch['labels'], batch['labels2']
         del batch['labels']
         del batch['labels2']
+        max_label = self.max_label if self.params.task !='all' else self.max_label[tid]
+        min_label = self.min_label if self.params.task !='all' else self.min_label[tid]
         with torch.no_grad():
             outputs = self.model(**batch)[1]#32*768
             m = nn.Softmax(dim=-1)
-            outputs =  m(torch.matmul(outputs, self.stored_prototypes[tid]['features'].T)/ math.sqrt(self.config.hidden_size))#32x128
-            proto_weights =  torch.zeros(len(self.stored_prototypes[tid]['features']), self.max_label-self.min_label+1).to(self.device)
-            proto_weights[torch.arange(len(proto_weights)), self.stored_prototypes[tid]['labels']] += 0.5 
-            proto_weights[torch.arange(len(proto_weights)), self.stored_prototypes[tid]['labels2']] += 0.5 
+            if 'features' in self.stored_prototypes[tid]:
+                outputs =  m(torch.matmul(outputs, self.stored_prototypes[tid]['features'].T)/ math.sqrt(self.config.hidden_size))#32x128
+                proto_weights =  torch.zeros(len(self.stored_prototypes[tid]['features']), max_label-min_label+1).to(self.device)
+                proto_weights[torch.arange(len(proto_weights)), self.stored_prototypes[tid]['labels']] += 0.5 
+                proto_weights[torch.arange(len(proto_weights)), self.stored_prototypes[tid]['labels2']] += 0.5 
+            else:
+                outputs = torch.matmul(outputs,outputs.T)/ math.sqrt(self.config.hidden_size)#32x32
+                outputs[torch.arange(len(outputs)),torch.arange(len(outputs))] =  -1e32
+                outputs = m(outputs)
+                proto_weights =  torch.zeros(len(outputs), max_label-min_label+1).to(self.device)
+                proto_weights[torch.arange(len(outputs)), labels] += 1. 
             outputs = torch.log(torch.matmul(outputs, proto_weights)+1e-7)
             loss, logits =  self.bert_style_loss(outputs,labels, labels2)
         predictions = torch.argmax(logits, dim=-1)
         acc = predictions==labels
-        return {'loss': loss.detach().cpu(),'acc':acc.detach().cpu(),'kappa':{'preds':predictions.detach().cpu(), 'labels':labels.detach().cpu()}}
+        if self.params.task !='all':
+            return {'loss': loss.detach().cpu(),'acc':acc.detach().cpu(),'kappa':{'preds':predictions.detach().cpu(), 'labels':labels.detach().cpu()}}
+        res = {'loss': loss.detach().cpu()}
+        for task_id in range(len(self.params.task_lists)):
+            if task_id==tid:
+                res['accuracy_'+str(tid)] = acc.detach().cpu()
+                res['kappa_'+str(tid)] =  {'preds':predictions.detach().cpu(), 'labels':labels.detach().cpu()}
+            else:
+                res['accuracy_'+str(task_id)] = []
+                res['kappa_'+str(task_id)] =  {}
+        return res
 
 
 

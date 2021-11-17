@@ -7,9 +7,46 @@ def tokenize_function(tokenizer, sentences):
     return tokenizer(sentences, padding=True, truncation=True,return_tensors="pt")
 
 class ProtoSampler(Sampler):
-    def __init__(self, dataset,batch_size,task, test):
+    def __init__(self, dataset,batch_size,task,proto_count, test):
         if task=='all':#all tasks
-            pass
+            if test:
+                indices = defaultdict(list)
+                for idx,d in enumerate(dataset):
+                    indices[d['tid']].append(idx)
+                self.batches = [batch.tolist() for k,vals in indices.items() for batch in torch.split(torch.tensor(vals), batch_size)]
+                pass
+                
+            else:
+                indices = defaultdict(lambda: defaultdict(list))
+                for idx,d in enumerate(dataset):
+                    indices[d['tid']][d['l1'] if d['l1']>=0 else d['l2']].append(idx)
+                label_proportion = {}
+                for task_id, vals in indices.items():
+                    label_proportion[task_id] = {}
+                    for k,v in vals.items():
+                        random.shuffle(v)
+                        label_proportion[task_id][k] =  len(v)
+                    total_cnt =  sum(label_proportion[task_id].values())
+                    label_proportion[task_id] = {k : max(3,int((v*batch_size)/total_cnt)) for k,v in label_proportion[task_id].items()}
+                #
+                self.batches, offset =[], defaultdict(lambda: defaultdict(int))
+                for task_id, vals in indices.items():
+                    task_batches, flag = [], True
+                    while flag:
+                        out = []
+                        for k,v in label_proportion[task_id].items():
+                            if offset[task_id][k]+v<= len(indices[task_id][k]):
+                                out += indices[task_id][k][offset[task_id][k]: offset[task_id][k]+v]
+                                offset[task_id][k] +=v
+                            else:  flag = False
+                        if flag: task_batches.append(out)
+                    n_batch =  len(task_batches)//(proto_count+1)
+
+                    task_batches = [task_batches[idx*(proto_count+1): (idx+1)*(proto_count+1)] for idx in range(n_batch)]
+                    self.batches.extend(task_batches)
+                random.shuffle(self.batches)
+                self.batches = sum(self.batches, [])
+
         else:
             if test:
                 indices = torch.arange(len(dataset))
