@@ -458,7 +458,9 @@ class ProtoModel(BaseModel):
 
     def test_step(self, batch):
         tid = int(batch['tid'][0]) if 'tid' in batch else 0
-        if 'tid' in batch: del batch['tid']
+        if 'tid' in batch: 
+            tids = batch['tid']
+            del batch['tid']
         labels, labels2 = batch['labels'], batch['labels2']
         del batch['labels']
         del batch['labels2']
@@ -470,7 +472,17 @@ class ProtoModel(BaseModel):
             if 'features' in self.stored_prototypes[tid]:
                 outputs =  m(torch.matmul(outputs, self.stored_prototypes[tid]['features'].T)/ math.sqrt(self.config.hidden_size))#32x128
                 proto_weights =  torch.zeros(len(self.stored_prototypes[tid]['features']), max_label-min_label+1).to(self.device)
-                proto_weights[torch.arange(len(proto_weights)), self.stored_prototypes[tid]['labels']] += 0.5 
+                try:
+                    proto_weights[torch.arange(len(proto_weights)), self.stored_prototypes[tid]['labels']] += 0.5 
+                except:
+                    print('tids', tids)
+                    print(proto_weights.shape, len(self.stored_prototypes[tid]['features']))
+                    print('labels', min_label, max_label)
+                    print(self.stored_prototypes[tid]['labels'])
+                    for idx in range(len(self.stored_prototypes)):
+                        print(self.stored_prototypes[idx].keys(), self.stored_prototypes[idx].get('labels', []))
+                    raise Exception
+
                 proto_weights[torch.arange(len(proto_weights)), self.stored_prototypes[tid]['labels2']] += 0.5 
             else:
                 outputs = torch.matmul(outputs,outputs.T)/ math.sqrt(self.config.hidden_size)#32x32
