@@ -475,12 +475,13 @@ class ProtoModel(BaseModel):
                 try:
                     proto_weights[torch.arange(len(proto_weights)), self.stored_prototypes[tid]['labels']] += 0.5 
                 except:
-                    print('tids', tids)
+                    print(tid)
+                    print('tids', tids.data.cpu().numpy())
                     print(proto_weights.shape, len(self.stored_prototypes[tid]['features']))
                     print('labels', min_label, max_label)
-                    print(self.stored_prototypes[tid]['labels'])
+                    print(self.stored_prototypes[tid]['labels'].data.cpu())
                     for idx in range(len(self.stored_prototypes)):
-                        print(self.stored_prototypes[idx].keys(), self.stored_prototypes[idx].get('labels', []))
+                        print(self.stored_prototypes[idx].keys(), self.stored_prototypes[idx].get('labels', []).data.cpu())
                     raise Exception
 
                 proto_weights[torch.arange(len(proto_weights)), self.stored_prototypes[tid]['labels2']] += 0.5 

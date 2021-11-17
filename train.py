@@ -115,6 +115,7 @@ def main():
     while continue_training:
         train_loader, valid_loader,test_loader = model.dataloaders(
             iters=args.iters)
+            
         train_logs = []
         model.train()
         start_time = time.time()
