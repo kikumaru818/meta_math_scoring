@@ -8,6 +8,7 @@ import os
 SEED = 999
 RAW_DIR = "../data/NAEP_AS_Challenge_Data/Items for Item-Specific Models/"
 HASH_PATH =  'data/tasks_hash.json'
+SUBMISSION_HASH_PATH =  'data/submission_tasks_hash.json'
 #schema = {'bl':0, 'l1':1, 'l2':2, 'sx':3, 'rc':4, 'an':5, 'wc':6, 'txt':7}
 def safe_parse(val):
     try:
@@ -19,7 +20,7 @@ def compute_mapper(header):
     words = header.strip('\n').split(',')
     words = {w:i for i,w in enumerate(words)}
     #BookletNumber	Score1	Score2	DSEX	SRACE10	ACCnum	WordCount	ReadingTextResponse
-    schema = {'bl': words["BookletNumber"],'l1':words['Score1'], 'l2':words['Score2'], 'sx':words['DSEX'], 'rc':words['SRACE10'], 'an': words['ACCnum'],'wc': words['WordCount'], 'txt': words['ReadingTextResponse']
+    schema = {'bl': words["BookletNumber"],'l1':words.get('Score1',-1), 'l2':words.get('Score2', -1), 'sx':words['DSEX'], 'rc':words['SRACE10'], 'an': words['ACCnum'],'wc': words['WordCount'], 'txt': words['ReadingTextResponse']
     }
     return schema
 
@@ -34,6 +35,9 @@ def parse_csv(filename):
             words = line.split(',')
             out = {}
             for k,v in schema.items():
+                if v==-1:
+                    out['l1']=out['l2']=1
+                    continue
                 if k =='txt':
                     out[k] =  ','.join(words[v:])
                 else:
@@ -71,8 +75,7 @@ def create_splits(data,train,valid):
     train_data, val_data, test_data = data[:n_train], data[n_train:n_val], data[n_val:]
     output = {'train':train_data, 'valid':val_data, 'test':test_data}
     compute_distribution(output)
-    hashes =  compute_hashes(output)
-    return output,hashes
+    return output
     
 
 def load_dataset(task, create_hash, train,valid):
@@ -86,12 +89,38 @@ def load_dataset(task, create_hash, train,valid):
     data, data_2  =  parse_csv(train_file), parse_csv(val_file)
     data.extend(data_2)
     best_kappa = human_kappa(data)
-    data, hashes = create_splits(data, train,valid)
+    data = create_splits(data, train,valid)
+    hashes =  compute_hashes(data)
     data['human_kappa'] = best_kappa
     tasks_hash = open_json(HASH_PATH)
     if create_hash:
         tasks_hash[task] = {'train':hashes['train'], 'valid':hashes['valid'], 'test':hashes['test']}
         dump_json(HASH_PATH, tasks_hash)
+    else:
+        assert tasks_hash.get(task, {}).get('train', "0")==hashes['train'], 'Train Split is not Matching.'
+        assert tasks_hash.get(task, {}).get('valid', "0")==hashes['valid'], 'Validation Split is not Matching.'
+        assert tasks_hash.get(task, {}).get('test', "0")==hashes['test'], 'Test Split is not Matching.'
+    return data
+
+def submission_load_dataset(task, create_hash, train,valid):
+    """
+        Returns {'train/val/test': [{key:value}], 'train/val/test_dist':{label:percentage}}
+        ['BookletNumber', 'Score1', 'Score2', 'DSEX', 'SRACE10', 'ACCnum', 'WordCount', 'ReadingTextResponse']
+    """
+    train_file = RAW_DIR+task+"/"+task.split('/')[1]+"_Training.csv"
+    val_file = RAW_DIR+task+"/"+task.split('/')[1]+"_Validation_DS&SS.csv"
+    test_file = RAW_DIR+task+"/"+task.split('/')[1]+"_Test.csv"
+    data, data_2, test_data  =  parse_csv(train_file), parse_csv(val_file), parse_csv(test_file)
+    data.extend(data_2)
+    best_kappa = human_kappa(data)
+    data = create_splits(data, train,valid)
+    data['human_kappa'] = best_kappa
+    data['test'] =  test_data
+    hashes =  compute_hashes(data)
+    tasks_hash = open_json(SUBMISSION_HASH_PATH)
+    if create_hash:
+        tasks_hash[task] = {'train':hashes['train'], 'valid':hashes['valid'], 'test':hashes['test']}
+        dump_json(SUBMISSION_HASH_PATH, tasks_hash)
     else:
         assert tasks_hash.get(task, {}).get('train', "0")==hashes['train'], 'Train Split is not Matching.'
         assert tasks_hash.get(task, {}).get('valid', "0")==hashes['valid'], 'Validation Split is not Matching.'
