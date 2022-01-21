@@ -12,6 +12,6 @@ The `l1` aka score1 and `l2` aka score2 fields of the test samples are set to 1 
 To load some task, use,
 ```
 from utils.load_data import load_dataset
-data = load_dataset(task, create_hash=False,train=0.6, valid=0.2)
+data = load_dataset(task, create_hash=False,train=0.6, valid=0.2, fold=1/2/3/4/5)
 ```
 Task list can be found in `data/tasks.json`. This code will check the split hash with my hash stored in `data\task_hash.json` file. 
