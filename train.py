@@ -56,6 +56,7 @@ def add_learner_params():
     # parallelizm params:
     parser.add_argument('--batch_size', default=32, type=int)
     # extras
+    parser.add_argument('--fold', default=1, type=int)
     parser.add_argument('--cuda', action='store_true')
     parser.add_argument('--save', action='store_true')
     parser.add_argument('--neptune', action='store_true')
