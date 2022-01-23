@@ -113,7 +113,7 @@ class BaseModel(nn.Module):
 
     def prepare_data(self):
         if self.params.task!='all':
-            data = load_dataset(self.params.task, create_hash=False,train=0.6, valid=0.2)
+            data = load_dataset(self.params.task, create_hash=False,train=0.6, valid=0.2,fold=self.params.fold)
             self.trainset = data['train']
             self.validset = data['valid']
             self.testset = data['test']
@@ -134,7 +134,7 @@ class BaseModel(nn.Module):
 
         else:
             self.params.task_lists = open_json('data/tasks.json')
-            data = [load_dataset(task, create_hash=False,train=0.6, valid=0.2) for task in self.params.task_lists]
+            data = [load_dataset(task, create_hash=False,train=0.6, valid=0.2,fold=self.params.fold) for task in self.params.task_lists]
             self.trainset = [d['train'] for d in data]
             self.validset = [d['valid'] for d in data]
             self.testset = [d['test'] for d in data]

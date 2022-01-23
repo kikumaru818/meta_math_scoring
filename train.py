@@ -76,12 +76,21 @@ def main():
     args.root = 'logs/'+args.name+'/'
     safe_makedirs(args.root)
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')    
-    if args.cuda: assert device.type == 'cuda', 'no gpu found!'
-    with open(args.root+'config.yml', 'w') as outfile:
-        yaml.dump(vars(args), outfile, default_flow_style=False)
+    if args.cuda:
+        if device.type!='cuda':
+            from datetime import datetime
+            import subprocess
+            time_now = str(datetime.utcnow())
+            command = "sacct -n -j " + args.name+" --format=Jobname"
+            config_name =[d for d in  (subprocess.check_output(command, shell=True)).decode("utf-8").split(' ') if '.sh' in d][0]
+            line = args.name+','+args.nodes+','+str(time_now)+','+config_name +'\n'
+            with open('logs/exceptions.txt', 'a') as fp:
+                fp.write(line)
+            raise ValueError('No Cuda Found!')
+    
     if args.neptune:
         import neptune.new as neptune
-        project = "arighosh/naep2"
+        project = "arighosh/naep-aied"
         run = neptune.init(
                 project=project,
                 api_token=os.environ["NEPTUNE_API_TOKEN"],

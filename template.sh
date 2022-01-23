@@ -4,17 +4,17 @@
 #SBATCH --mem={memory}
 #SBATCH --mail-type=END
 #SBATCH --mail-user=aritraghosh.iem@gmail.com
-#SBATCH --partition={gpu}-{long}
-#SBATCH -o /mnt/nfs/scratch1/arighosh/naep/slurm/%j.out
-module load python3/current
-cd /mnt/nfs/scratch1/arighosh/naep
-source ../venv/simclr/bin/activate
+#SBATCH --partition={gpu}
+#SBATCH -o {base_path}/slurm/%j.out
+{constraints}
+{paths}
 python train.py\
     --task "{task}"\
     --lm {lm}\
     --losses "{losses}"\
     --generate {generate}\
     --lr {lr}\
+    --fold {fold}\
     --batch_size {batch_size}\
     --seed {seed}\
     --problem {problem}\

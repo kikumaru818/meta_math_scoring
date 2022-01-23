@@ -39,29 +39,37 @@ def get_run_id():
         run_id = len(expts)
     return run_id
 
+UNITY_CONSTRAINTS = '#SBATCH --constraint="ials_gigabyte_gpu_2020"'
+UNITY_BASE = "/gypsum/scratch1/arighosh/naep"
+GYPSUM_BASE = "/mnt/nfs/scratch1/arighosh/naep"
+UNITY_PATHS = 'module load python/3.9.1\nmodule load cuda/10.2.89\ncd {}\nsource ~/.venv/catext/bin/activate'.format(UNITY_BASE)
+GYPSUM_PATHS = 'module load python3/current\ncd {}\nsource ../venv/simclr/bin/activate'.format(GYPSUM_BASE)
     
 def is_long(combo):
     return 'long'
 
 save = False
-fixed_params = '   '.join(['--neptune', '--cuda', '--include_question'])
+fixed_params = '   '.join(['--neptune', '--cuda'])
 hyperparameters = [
-    [('task',), ['all']],#[  "Grade 4/2017_DBA_DR04_1715RE1T10_05"]],#, 'facebook/bart-large','microsoft/deberta-v2-xlarge', 'facebook/bart-large'
-    [('lm',), ['bert-base-uncased']],#'bert-base-uncased','roberta-base','bert-large-uncased','roberta-large','gpt2'
-    # [('lm',), ['gpt2']],#'bert-base-uncased','roberta-base','bert-large-uncased','roberta-large','gpt2'
-    # [('losses',), ['cce;qwp', 'cce', 'qwp']],
-    [('losses',), [ 'cce' ]],
-    [('problem',), [ 'proto' ]],
-    [('generate',), ['none']],
-    [('lr',), [2e-5]],#2e-4
-    [('iters',), [100]],
-    [('seed',), [999]],
-    [('batch_size',), [32]],
-    [('fixed_params',), [fixed_params]]
+    [('task',), tasks]#[  "Grade 4/2017_DBA_DR04_1715RE1T10_05"]],#, 'facebook/bart-large','microsoft/deberta-v2-xlarge', 'facebook/bart-large'
+    ,[('lm',), ['bert-base-uncased']]#'bert-base-uncased','roberta-base','bert-large-uncased','roberta-large','gpt2'
+    ,[('losses',), [ 'cce' ]]
+    ,[('problem',), [ 'base' ]]
+    ,[('generate',), ['none']]
+    ,[('lr',), [2e-5]]#2e-4
+    ,[('iters',), [100]]
+    ,[('fold',), [1,2,3,4,5]]
+    ,[('seed',), [999]]
+    ,[('batch_size',), [32]]
+    ,[('fixed_params',), [fixed_params]]
+    ,[('cluster',), ['unity']]
 ]
 
+def get_base_path(combo):
+    return UNITY_BASE if combo['cluster'] =='unity' else GYPSUM_BASE
+
 def get_gpu(combo):
-    return 'rtx8000'
+    return 'gpu'
     if 'xlarge' in combo['lm']:
         return "m40"
     if 'cce' in combo['losses']:
@@ -72,8 +80,16 @@ def get_gpu(combo):
 def is_valid(combo):
     return True
 
-
-other_dependencies = {'gpu': get_gpu, 'memory': get_memory, 'n_cpu':get_cpu, 'valid':is_valid, 'long':is_long}
+def get_constraints(combo):
+    if combo['cluster']=='unity':
+        return UNITY_CONSTRAINTS
+    return ""
+def get_paths(combo):
+    if combo['cluster']=='unity':
+        return UNITY_PATHS
+    return GYPSUM_PATHS
+    
+other_dependencies = {'gpu': get_gpu, 'memory': get_memory, 'n_cpu':get_cpu, 'valid':is_valid, 'long':is_long, 'constraints':get_constraints, 'paths':get_paths, 'base_path' :get_base_path}
 
 run_id = int(get_run_id())
 
@@ -125,8 +141,8 @@ for combo in combinations:
     run_id += 1
 
 print(gpu_counts)
-# schedule jobs
+excludes =  "--exclude=node128,node097,node094,node095" if combo['cluster']=='gypsum' else "--exclude=node43,node46,node42"
 for script in scripts:#--exclude=node078
-    command = "sbatch  %s" % script
-    #print(command)
+    command = "sbatch {} {}".format(excludes,script)
+    # print(command)
     print(subprocess.check_output(command, shell=True))
