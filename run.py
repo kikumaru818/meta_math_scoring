@@ -58,7 +58,7 @@ hyperparameters = [
     ,[('generate',), ['none']]
     ,[('lr',), [2e-5]]#2e-4
     ,[('iters',), [100]]
-    ,[('fold    ',), [1,2,3,4,5]]
+    ,[('fold',), [1,2,3,4,5]]
     ,[('seed',), [999]]
     ,[('batch_size',), [8]]
     ,[('fixed_params',), [fixed_params]]
@@ -141,7 +141,7 @@ for combo in combinations:
     run_id += 1
 
 print(gpu_counts)
-excludes =  "--exclude=node128,node097,node094,node095" if combo['cluster']=='gypsum' else "--exclude=node43,node46,node42"
+excludes =  "--exclude=node128,node097,node094,node095" if combo['cluster']=='gypsum' else "--exclude=node46,node53"
 for script in scripts:#--exclude=node078
     command = "sbatch {} {}".format(excludes,script)
     # print(command)
