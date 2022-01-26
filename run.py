@@ -49,7 +49,7 @@ def is_long(combo):
     return 'long'
 
 save = False
-fixed_params = '   '.join(['--neptune', '--cuda'])
+fixed_params = '   '.join(['--neptune', '--cuda', '--include_question'])
 hyperparameters = [
     [('task',), tasks]#[  "Grade 4/2017_DBA_DR04_1715RE1T10_05"]],#, 'facebook/bart-large','microsoft/deberta-v2-xlarge', 'facebook/bart-large'
     ,[('lm',), ['bert-base-uncased']]#'bert-base-uncased','roberta-base','bert-large-uncased','roberta-large','gpt2'
@@ -58,9 +58,9 @@ hyperparameters = [
     ,[('generate',), ['none']]
     ,[('lr',), [2e-5]]#2e-4
     ,[('iters',), [100]]
-    ,[('fold',), [1,2,3,4,5]]
+    ,[('fold    ',), [1,2,3,4,5]]
     ,[('seed',), [999]]
-    ,[('batch_size',), [32]]
+    ,[('batch_size',), [8]]
     ,[('fixed_params',), [fixed_params]]
     ,[('cluster',), ['unity']]
 ]
