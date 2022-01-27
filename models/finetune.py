@@ -239,7 +239,7 @@ class BaseModel(nn.Module):
                 self.passage_embedding = [self.model.bert(**d, output_hidden_states=True).hidden_states[-1][:,0] for d in self.passage]
                 self.question_embedding = [self.model.bert(**d, output_hidden_states=True).hidden_states[-1][:,0]  for d in self.question]
 
-    def append_passage_question_embeddings(self,batch, task_ids):
+    def append_passage_question_embeddings(self,batch, task_ids, only_passage=False):
         input_ids = batch['input_ids']
         input_ids[:,0]=  self.tokenizer.convert_tokens_to_ids('[SEP]')
         class_tokens = torch.zeros(len(input_ids),1).long().to(self.device)+self.tokenizer.convert_tokens_to_ids('[CLS]')
@@ -254,9 +254,14 @@ class BaseModel(nn.Module):
         else:
             input_embeds, attention_mask, token_type_ids = [], [], []
             for idx in range(len(input_ids)):
-                embeds = torch.cat([class_embedding[idx], self.question_embedding[task_ids[idx]],  self.passage_embedding[task_ids[idx]], input_embedding[idx]         ], dim =0)
-                mask = torch.cat([torch.ones(len(self.passage_embedding[task_ids[idx]])+2).long().to(self.device), batch['attention_mask'][idx]   ], dim =0)
-                token_ids = torch.cat([torch.zeros(len(self.passage_embedding[task_ids[idx]])+2).long().to(self.device), batch['token_type_ids'][idx]   ], dim =0)
+                if only_passage:
+                    embeds = torch.cat([class_embedding[idx],  self.passage_embedding[task_ids[idx]], input_embedding[idx]         ], dim =0)
+                    mask = torch.cat([torch.ones(len(self.passage_embedding[task_ids[idx]])+1).long().to(self.device), batch['attention_mask'][idx]   ], dim =0)
+                    token_ids = torch.cat([torch.zeros(len(self.passage_embedding[task_ids[idx]])+1).long().to(self.device), batch['token_type_ids'][idx]   ], dim =0)
+                else:
+                    embeds = torch.cat([class_embedding[idx], self.question_embedding[task_ids[idx]],  self.passage_embedding[task_ids[idx]], input_embedding[idx]         ], dim =0)
+                    mask = torch.cat([torch.ones(len(self.passage_embedding[task_ids[idx]])+2).long().to(self.device), batch['attention_mask'][idx]   ], dim =0)
+                    token_ids = torch.cat([torch.zeros(len(self.passage_embedding[task_ids[idx]])+2).long().to(self.device), batch['token_type_ids'][idx]   ], dim =0)
                 input_embeds.append(embeds)
                 attention_mask.append(mask)
                 token_type_ids.append(token_ids)
@@ -268,7 +273,6 @@ class BaseModel(nn.Module):
         batch['inputs_embeds'] =  input_embeds[:, :self.config.max_position_embeddings]
             
         del batch['input_ids']
-        pass
 
     def train_step(self, batch):
         self.zero_grad()
@@ -289,7 +293,7 @@ class BaseModel(nn.Module):
             if self.counter%self.params.update_every==0:
                 self.update_passage_cache()
             self.counter += 1
-            self.append_passage_question_embeddings(batch, task_ids)
+            self.append_passage_question_embeddings(batch, task_ids,only_passage =True)
         outputs = self.model(**batch)
         if self.params.task=='all':
             self.is_training = True

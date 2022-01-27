@@ -39,8 +39,8 @@ def get_run_id():
         run_id = len(expts)
     return run_id
 
-#UNITY_CONSTRAINTS = '#SBATCH --constraint="ials_gigabyte_gpu_2020"'
-UNITY_CONSTRAINTS = '#SBATCH --constraint="len_sr650_2018|dell_r740_2020"'
+UNITY_CONSTRAINTS = '#SBATCH --constraint="ials_gigabyte_gpu_2020"'
+# UNITY_CONSTRAINTS = '#SBATCH --constraint="len_sr650_2018|dell_r740_2020"'
 UNITY_BASE = "/gypsum/scratch1/arighosh/naep"
 GYPSUM_BASE = "/mnt/nfs/scratch1/arighosh/naep"
 UNITY_PATHS = 'module load python/3.9.1\nmodule load cuda/10.2.89\ncd {}\nsource ~/.venv/catext/bin/activate'.format(UNITY_BASE)
@@ -50,10 +50,10 @@ def is_long(combo):
     return 'long'
 
 save = False
-fixed_params = '   '.join(['--neptune', '--cuda', '--include_question'])
+fixed_params = '   '.join(['--neptune', '--cuda', '--include_question', '--include_passage'])
 hyperparameters = [
-    #[('task',), tasks]#
-    [('task',), ['all']]#
+    [('task',), tasks]#
+    #[('task',), ['all']]#
     ,[('lm',), ['bert-base-uncased']]#'bert-base-uncased','roberta-base','bert-large-uncased','roberta-large','gpt2'
     ,[('losses',), [ 'cce' ]]
     ,[('problem',), [ 'base' ]]
@@ -62,7 +62,7 @@ hyperparameters = [
     ,[('iters',), [100]]
     ,[('fold',), [1,2,3,4,5]]
     ,[('seed',), [999]]
-    ,[('batch_size',), [24]]
+    ,[('batch_size',), [8]]
     ,[('fixed_params',), [fixed_params]]
     ,[('cluster',), ['unity']]
 ]
@@ -71,7 +71,7 @@ def get_base_path(combo):
     return UNITY_BASE if combo['cluster'] =='unity' else GYPSUM_BASE
 
 def get_gpu(combo):
-    return 'gpu-long'
+    return 'gpu'
     if 'xlarge' in combo['lm']:
         return "m40"
     if 'cce' in combo['losses']:
