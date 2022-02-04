@@ -93,7 +93,7 @@ def load_dataset(task, create_hash, train,valid,fold=1, spell_check = False):
         global RAW_DIR
         RAW_DIR = "/gypsum/work1/andrewlan/nigel/naep-as-challenge/code/data/NAEP_AS_Challenge_Data/Items for Item-Specific Models/"
         train_file = RAW_DIR+task+"/spell_checked/"+task.split('/')[1]+"_Training_spell_checked.csv"
-        val_file = RAW_DIR+task+"/"+task.split('/')[1]+"_Validation_DS&SS_spell_checked.csv"
+        val_file = RAW_DIR+task+"/spell_checked/"+task.split('/')[1]+"_Validation_DS&SS_spell_checked.csv"
     else:
         train_file = RAW_DIR+task+"/"+task.split('/')[1]+"_Training.csv"
         val_file = RAW_DIR+task+"/"+task.split('/')[1]+"_Validation_DS&SS.csv"
