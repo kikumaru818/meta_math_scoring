@@ -143,7 +143,7 @@ for combo in combinations:
     run_id += 1
 
 print(gpu_counts)
-excludes =  "--exclude=node128,node097,node094,node095" if combo['cluster']=='gypsum' else "--exclude=node46,node53"
+excludes =  "--exclude=node128,node097,node094,node095" if combo['cluster']=='gypsum' else "--exclude=node46,node53,node62"
 for script in scripts:#--exclude=node078
     command = "sbatch {} {}".format(excludes,script)
     # print(command)
