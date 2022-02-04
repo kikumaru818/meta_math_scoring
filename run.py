@@ -50,7 +50,7 @@ def is_long(combo):
     return 'long'
 
 save = False
-fixed_params = '   '.join(['--neptune', '--cuda', '--include_question', '--include_passage'])
+fixed_params = '   '.join(['--neptune', '--cuda',  '--spell_check'])#'--include_question', '--include_passage',
 hyperparameters = [
     [('task',), tasks]#
     #[('task',), ['all']]#

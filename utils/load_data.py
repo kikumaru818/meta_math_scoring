@@ -1,4 +1,5 @@
 #from transformers.utils.logging import remove_handler
+from glob import glob
 import utils
 from utils.utils import open_json,dump_json, human_kappa
 from collections import defaultdict
@@ -82,14 +83,20 @@ def create_splits(data,train,valid,fold=1):
     return output
     
 
-def load_dataset(task, create_hash, train,valid,fold=1):
+def load_dataset(task, create_hash, train,valid,fold=1, spell_check = False):
     """
         Returns {'train/val/test': [{key:value}], 'train/val/test_dist':{label:percentage}}
         feature schema : {'bl':0, 'l1':1, 'l2':2, 'sx':3, 'rc':4, 'an':5, 'wc':6, 'txt':7} word val represent column number of 
         ['BookletNumber', 'Score1', 'Score2', 'DSEX', 'SRACE10', 'ACCnum', 'WordCount', 'ReadingTextResponse']
     """
-    train_file = RAW_DIR+task+"/"+task.split('/')[1]+"_Training.csv"
-    val_file = RAW_DIR+task+"/"+task.split('/')[1]+"_Validation_DS&SS.csv"
+    if spell_check:
+        global RAW_DIR
+        RAW_DIR = "/gypsum/work1/andrewlan/nigel/naep-as-challenge/code/data/NAEP_AS_Challenge_Data/Items for Item-Specific Models/"
+        train_file = RAW_DIR+task+"/spell_checked/"+task.split('/')[1]+"_Training_spell_checked.csv"
+        val_file = RAW_DIR+task+"/"+task.split('/')[1]+"_Validation_DS&SS_spell_checked.csv"
+    else:
+        train_file = RAW_DIR+task+"/"+task.split('/')[1]+"_Training.csv"
+        val_file = RAW_DIR+task+"/"+task.split('/')[1]+"_Validation_DS&SS.csv"
     data, data_2  =  parse_csv(train_file), parse_csv(val_file)
     data.extend(data_2)
     best_kappa = human_kappa(data)
