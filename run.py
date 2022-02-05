@@ -50,7 +50,7 @@ def is_long(combo):
     return 'long'
 
 save = False
-fixed_params = '   '.join(['--neptune', '--cuda',  '--spell_check'])#'--include_question', '--include_passage',
+fixed_params = '   '.join(['--neptune','--include_question', '--cuda',  '--spell_check'])#'--include_question', '--include_passage',
 hyperparameters = [
     [('task',), tasks]#
     #[('task',), ['all']]#
@@ -143,7 +143,7 @@ for combo in combinations:
     run_id += 1
 
 print(gpu_counts)
-excludes =  "--exclude=node128,node097,node094,node095" if combo['cluster']=='gypsum' else "--exclude=node46,node53,node62"
+excludes =  "--exclude=node128,node097,node094,node095" if combo['cluster']=='gypsum' else "--exclude=node46,node53,node42,node45,node62"
 for script in scripts:#--exclude=node078
     command = "sbatch {} {}".format(excludes,script)
     # print(command)
