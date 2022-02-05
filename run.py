@@ -70,8 +70,8 @@ def is_long(combo):
 save = False
 fixed_params = '   '.join(['--neptune','--include_question','--include_passage', '--cuda',  '--spell_check'])#'--include_question', '--include_passage',
 hyperparameters = [
-    [('task',), tasks]#
-    #[('task',), ['all']]#
+    #[('task',), tasks]#
+    [('task',), ['all']]#
     ,[('lm',), ['bert-base-uncased']]#'bert-base-uncased','roberta-base','bert-large-uncased','roberta-large','gpt2'
     ,[('losses',), [ 'cce' ]]
     ,[('problem',), [ 'base' ]]
@@ -89,7 +89,7 @@ def get_base_path(combo):
     return UNITY_BASE if combo['cluster'] =='unity' else GYPSUM_BASE
 
 def get_gpu(combo):
-    return 'gpu'
+    return 'gpu-long'
     if 'xlarge' in combo['lm']:
         return "m40"
     if 'cce' in combo['losses']:
