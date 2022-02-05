@@ -1,12 +1,30 @@
 import itertools
 import collections
 import glob
+import json
 import os
 import datetime
 import subprocess
 import string
 import sys
-from utils.utils import safe_makedirs,open_json
+def open_json(path_):
+    with open(path_) as fh:
+        data = json.load(fh)
+    return data
+
+
+def dump_json(path_, data):
+    with open(path_, 'w') as fh:
+        json.dump(data, fh, indent=2)
+    return data
+
+def safe_makedirs(path_):
+    if not os.path.exists(path_):
+        try:
+            os.makedirs(path_)
+        except FileExistsError:
+            pass
+
 tasks = open_json('data/tasks.json')
 
 create_dirs = ['logs/', 'slurm/', 'configs/']
